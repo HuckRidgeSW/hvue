@@ -10,4 +10,5 @@ func main() {
 		hvue.El("#app"),
 		hvue.Data("message", "Hello, Vue!"))
 	js.Global.Set("app", app)
+	// In the JS console, try setting app.message to something else.
 }
