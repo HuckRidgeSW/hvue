@@ -1,13 +1,13 @@
 package main
 
 import (
+	"github.com/gopherjs/gopherjs/js"
 	"github.com/theclapp/hvue"
 )
 
 func main() {
-	vm := hvue.NewVM(
-		hvue.NewConfig(
-			hvue.El("#app"),
-			hvue.Data("message", "Hello, Vue!")))
-	_ = vm
+	app := hvue.NewVM(
+		hvue.El("#app"),
+		hvue.Data("message", "Hello, Vue!"))
+	js.Global.Set("app", app)
 }

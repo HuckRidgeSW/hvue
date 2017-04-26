@@ -15,15 +15,11 @@ type Config struct {
 
 type option func(*Config)
 
-func NewVM(c *Config) *VM {
-	return &VM{Object: js.Global.Get("Vue").New(c)}
-}
-
-func NewConfig(opts ...option) *Config {
+func NewVM(opts ...option) *VM {
 	c := &Config{Object: js.Global.Get("Object").New()}
 	c.Data = js.Global.Get("Object").New()
 	c.Option(opts...)
-	return c
+	return &VM{Object: js.Global.Get("Vue").New(c)}
 }
 
 func El(selector string) option {
