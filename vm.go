@@ -28,7 +28,7 @@ func El(selector string) option {
 	}
 }
 
-func Data(name, value string) option {
+func Data(name string, value interface{}) option {
 	return func(c *Config) {
 		c.Data.Set(name, value)
 	}
