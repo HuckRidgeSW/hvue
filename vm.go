@@ -10,16 +10,6 @@ type VM struct {
 	*js.Object
 }
 
-type Config struct {
-	*js.Object
-	El      string     `js:"el"`
-	Data    *js.Object `js:"data"`
-	Methods *js.Object `js:"methods"`
-	// Template string     `js:"template"`
-}
-
-type option func(*Config)
-
 var vmType = reflect.TypeOf(&VM{})
 
 // NewVM returns a new vm, analogous to Javascript `new Vue(...)`.  See
@@ -27,7 +17,7 @@ var vmType = reflect.TypeOf(&VM{})
 // https://commandcenter.blogspot.com.au/2014/01/self-referential-functions-and-design.html
 // for discussions of the options.
 func NewVM(opts ...option) *VM {
-	c := &Config{Object: js.Global.Get("Object").New()}
+	c := &Config{Object: NewObject()}
 	c.Option(opts...)
 	return &VM{Object: js.Global.Get("Vue").New(c)}
 }
@@ -44,7 +34,7 @@ func El(selector string) option {
 func Data(name string, value interface{}) option {
 	return func(c *Config) {
 		if c.Data == js.Undefined {
-			c.Data = js.Global.Get("Object").New()
+			c.Data = NewObject()
 		}
 		c.Data.Set(name, value)
 	}
@@ -56,7 +46,7 @@ func DataS(value interface{}) option {
 	return func(c *Config) {
 		if c.Data != js.Undefined {
 			panic("Cannot use hvue.Data and hvue.DataS together")
-			c.Data = js.Global.Get("Object").New()
+			c.Data = NewObject()
 		}
 		c.Object.Set("data", value)
 	}
@@ -69,7 +59,7 @@ func DataS(value interface{}) option {
 func MethodsOf(t interface{}) option {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
-			c.Methods = js.Global.Get("Object").New()
+			c.Methods = NewObject()
 		}
 		// Get the type of t
 		typ := reflect.TypeOf(t)
@@ -123,18 +113,5 @@ func MethodsOf(t interface{}) option {
 						return nil
 					}))
 		}
-	}
-}
-
-// func Template(t string) option {
-// 	return func(c *Config) {
-// 		c.Template = t
-// 	}
-// }
-
-// Option sets the options specified.
-func (f *Config) Option(opts ...option) {
-	for _, opt := range opts {
-		opt(f)
 	}
 }
