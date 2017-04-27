@@ -20,6 +20,8 @@ type Config struct {
 
 type option func(*Config)
 
+var vmType = reflect.TypeOf(&VM{})
+
 // NewVM returns a new vm, analogous to Javascript `new Vue(...)`.  See
 // https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis and
 // https://commandcenter.blogspot.com.au/2014/01/self-referential-functions-and-design.html
@@ -88,15 +90,38 @@ func MethodsOf(t interface{}) option {
 			m := typ.Method(i)
 
 			c.Methods.Set(m.Name,
-				func(event *js.Object) {
-					// Set the receiver's Object slot to c.Data.  receiver is a
-					// pointer so you have to dereference it with Elem().
-					receiver.Elem().Field(0).Set(reflect.ValueOf(c.Data))
+				js.MakeFunc(
+					func(this *js.Object, jsArgs []*js.Object) interface{} {
+						// Set the receiver's Object slot to c.Data.  receiver is a
+						// pointer so you have to dereference it with Elem().
+						receiver.Elem().Field(0).Set(reflect.ValueOf(c.Data))
 
-					m.Func.Call([]reflect.Value{
-						receiver,
-						reflect.ValueOf(event)})
-				})
+						// Construct the arglist
+						goArgs := make([]reflect.Value, m.Type.NumIn())
+						goArgs[0] = receiver
+						i := 1
+
+						// If the 2nd arg (the *first* arg if you don't include the
+						// receiver) expects a *VM, pass `this`.
+						if m.Type.NumIn() > 1 && m.Type.In(1) == vmType {
+							vm := &VM{Object: this}
+							goArgs[1] = reflect.ValueOf(vm)
+							i = 2
+						}
+
+						for j := 0; j < len(jsArgs); i, j = i+1, j+1 {
+							goArgs[i] = reflect.ValueOf(jsArgs[j])
+						}
+
+						result := m.Func.Call(goArgs)
+
+						// I don't think method results are ever actually used, but
+						// I could be wrong.
+						if len(result) >= 1 {
+							return result[0].Interface()
+						}
+						return nil
+					}))
 		}
 	}
 }
