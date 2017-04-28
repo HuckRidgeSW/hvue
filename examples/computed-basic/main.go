@@ -13,21 +13,16 @@ type Data struct {
 }
 
 func main() {
+	d := &Data{Object: hvue.NewObject()}
+	d.Message = "Hello"
+
 	hvue.NewVM(
-		hvue.El("#app-5"),
-		hvue.DataS(NewData("Hello, Vue!")),
-		hvue.MethodsOf(&Data{}))
-}
-
-func NewData(message string) *Data {
-	d := &Data{Object: js.Global.Get("Object").New()}
-	d.Message = message
-	return d
-}
-
-func (d *Data) ReverseMessage(event *js.Object) {
-	// event ignored
-	d.Message = reverse(d.Message)
+		hvue.El("#example"),
+		hvue.DataS(d),
+		hvue.Computed(
+			"reversedMessage", func(vm *hvue.VM) interface{} {
+				return reverse(d.Message)
+			}))
 }
 
 func reverse(s string) string {

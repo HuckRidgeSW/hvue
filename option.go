@@ -9,6 +9,7 @@ type Config struct {
 	Methods  *js.Object `js:"methods"`
 	Props    *js.Object `js:"props"`
 	Template string     `js:"template"`
+	Computed *js.Object `js:"computed"`
 }
 
 type option func(*Config)
