@@ -15,8 +15,8 @@ type Config struct {
 type option func(*Config)
 
 // Option sets the options specified.
-func (f *Config) Option(opts ...option) {
+func (c *Config) Option(opts ...option) {
 	for _, opt := range opts {
-		opt(f)
+		opt(c)
 	}
 }

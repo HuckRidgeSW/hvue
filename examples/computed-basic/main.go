@@ -20,7 +20,8 @@ func main() {
 		hvue.El("#example"),
 		hvue.DataS(d),
 		hvue.Computed(
-			"reversedMessage", func(vm *hvue.VM) interface{} {
+			"reversedMessage",
+			func(vm *hvue.VM) interface{} {
 				return reverse(d.Message)
 			}))
 }
