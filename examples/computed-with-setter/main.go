@@ -13,6 +13,8 @@ type Data struct {
 	FirstName string `js:"firstName"`
 	LastName  string `js:"lastName"`
 	// FullName is computed
+
+	VM *hvue.VM // Set by NewVM if you use DataS
 }
 
 func main() {
@@ -35,6 +37,13 @@ func main() {
 			}))
 	go func() {
 		time.Sleep(time.Second)
-		vm.Set("fullName", "Foo Bar Baz")
+		vm.Set("fullName", "First Middle Last")
+		// Note that FirstName & LastName are changed, too, and that "Middle"
+		// is effectively ignored: the full value is not stored, but computed
+		// from FirstName & LastName.
 	}()
+}
+
+func (d *Data) FullName() string {
+	return d.VM.Get("fullName").String()
 }

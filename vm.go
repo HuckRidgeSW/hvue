@@ -15,11 +15,20 @@ var vmType = reflect.TypeOf(&VM{})
 // NewVM returns a new vm, analogous to Javascript `new Vue(...)`.  See
 // https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis and
 // https://commandcenter.blogspot.com.au/2014/01/self-referential-functions-and-design.html
-// for discussions of the options.
+// for discussions of how the options work, and also see the examples tree.
+//
+// If you use a data object (via DataS) and it has a VM field, it's set to
+// this new VM.
 func NewVM(opts ...option) *VM {
 	c := &Config{Object: NewObject()}
 	c.Option(opts...)
-	return &VM{Object: js.Global.Get("Vue").New(c)}
+	vm := &VM{Object: js.Global.Get("Vue").New(c)}
+	if c.dataValue.IsValid() {
+		if vmField := c.dataValue.FieldByName("VM"); vmField.IsValid() {
+			vmField.Set(reflect.ValueOf(vm))
+		}
+	}
+	return vm
 }
 
 // El sets the vm's el slot.
@@ -41,7 +50,8 @@ func Data(name string, value interface{}) option {
 }
 
 // DataS sets the struct `value` as the entire contents of the vm's data
-// field.
+// field.  `value` should be a pointer to the struct.  If the object has a VM
+// field, NewVM sets it to the new VM object.
 func DataS(value interface{}) option {
 	return func(c *Config) {
 		if c.Data != js.Undefined {
@@ -49,6 +59,7 @@ func DataS(value interface{}) option {
 			c.Data = NewObject()
 		}
 		c.Object.Set("data", value)
+		c.dataValue = reflect.ValueOf(value).Elem()
 	}
 }
 

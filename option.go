@@ -1,6 +1,10 @@
 package hvue
 
-import "github.com/gopherjs/gopherjs/js"
+import (
+	"reflect"
+
+	"github.com/gopherjs/gopherjs/js"
+)
 
 type Config struct {
 	*js.Object
@@ -10,6 +14,8 @@ type Config struct {
 	Props    *js.Object `js:"props"`
 	Template string     `js:"template"`
 	Computed *js.Object `js:"computed"`
+
+	dataValue reflect.Value
 }
 
 type option func(*Config)
