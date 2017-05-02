@@ -35,13 +35,12 @@ func main() {
 				d.FirstName = names[0]
 				d.LastName = names[len(names)-1]
 			}))
-	go func() {
-		time.Sleep(time.Second)
-		vm.Set("fullName", "First Middle Last")
-		// Note that FirstName & LastName are changed, too, and that "Middle"
-		// is effectively ignored: the full value is not stored, but computed
-		// from FirstName & LastName.
-	}()
+
+	time.Sleep(time.Second)
+	vm.Set("fullName", "First Middle Last")
+	// Note that FirstName & LastName are changed, too, and that "Middle"
+	// is effectively ignored: the full value is not stored, but computed
+	// from FirstName & LastName.
 }
 
 func (d *Data) FullName() string {

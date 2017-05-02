@@ -20,16 +20,12 @@ func main() {
 		hvue.Destroyed(func(vm *hvue.VM) { println("Destroyed") }))
 
 	// Trigger the BeforeUpdate/Updated hooks
-	go func() {
-		time.Sleep(time.Second)
-		vm.Set("message", "new data")
+	time.Sleep(time.Second)
+	vm.Set("message", "new data")
 
-		// Trigger the BeforeDestroy/Destroyed hooks
-		go func() {
-			time.Sleep(time.Second)
-			vm.Call("$destroy")
-		}()
-	}()
+	// Trigger the BeforeDestroy/Destroyed hooks
+	time.Sleep(time.Second)
+	vm.Call("$destroy")
 
 	// In the JS console, check for logs from the lifecycle.
 }
