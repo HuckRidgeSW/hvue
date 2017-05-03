@@ -5,6 +5,18 @@
 			active: {{ isActive }}
 		</div>
 	</div>
+	<div id="object-syntax-2">
+		<div v-bind:class="classObject">
+			<div>Active: {{ classObject.active }}</div>
+			<div>TextDanger: {{ classObject.text_danger }}</div>
+		</div>
+	</div>		
+	<div id="object-syntax-3">
+		<div v-bind:class="classObject">
+			<div>Active: {{ classObject.active }}</div>
+			<div>TextDanger: {{ classObject.text_danger }}</div>
+		</div>
+	</div>
 </body>
 
 <script src="/vendor/vue.js"></script>
