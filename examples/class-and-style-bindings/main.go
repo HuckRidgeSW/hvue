@@ -57,10 +57,7 @@ func main() {
 		Error    *errorType `js:"error"`
 	}{Object: hvue.NewObject()}
 	data3.IsActive = false
-	// As of this writing, data3.Error = nil doesn't work.
-	// See https://github.com/gopherjs/gopherjs/issues/639
-	data3.Error = &errorType{Object: hvue.NewObject()}
-	data3.Error.Type = ""
+	data3.Error = nil
 
 	hvue.NewVM(
 		hvue.El("#object-syntax-3"),
@@ -69,9 +66,28 @@ func main() {
 			"classObject",
 			func(vm *hvue.VM) interface{} {
 				co := &ClassObject{Object: hvue.NewObject()}
-				co.Active = data3.IsActive && data3.Error.Type == ""
-				co.TextDanger = data3.Error.Type == "fatal"
+				co.Active = data3.IsActive && data3.Error.Object == nil
+				co.TextDanger = data3.Error.Object != nil &&
+					data3.Error.Type == "fatal"
 				return co
 			}))
 
+	// Binding styles
+	type StyleObject struct {
+		*js.Object
+		Color    string `js:"color"`
+		FontSize string `js:"fontSize"`
+	}
+	data4 := &struct {
+		*js.Object
+		*StyleObject `js:"styleObject"`
+	}{Object: hvue.NewObject()}
+	data4.StyleObject = &StyleObject{Object: hvue.NewObject()}
+	// As of this writing, you can't assign data4.Color or FontSize directly.
+	data4.StyleObject.Color = "red"
+	data4.StyleObject.FontSize = "13px"
+
+	hvue.NewVM(
+		hvue.El("#object-syntax-4"),
+		hvue.DataS(data4))
 }
