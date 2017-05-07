@@ -71,7 +71,7 @@ func DataS(value interface{}) option {
 // a pure Javascript object, with no Go fields.  That is, all slots just have
 // `js:"..."` tags.
 //
-// If a method wants a pointer to its vm, use
+// If a method wants a pointer to its vm, use a *VM as the first argument.
 func MethodsOf(t interface{}) option {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
@@ -128,8 +128,8 @@ func MethodsOf(t interface{}) option {
 									// A *js.Object
 									goArgs[i] = reflect.ValueOf(jsArgs[j])
 								} else {
-									// A pointer to a struct with first field of type
-									// *js.Object.
+									// Expects a pointer to a struct with first field
+									// of type *js.Object.
 									inType := inPtrType.Elem()
 									inArg := reflect.New(inType)
 									inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[j]))

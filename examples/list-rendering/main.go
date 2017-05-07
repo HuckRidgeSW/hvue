@@ -133,6 +133,21 @@ func simpleTodoList() {
 		hvue.El("#todo-list-example"),
 		hvue.DataS(data),
 		hvue.MethodsOf(&Data3{}))
+
+	// Show how to update an array element in place.
+	time.Sleep(500 * time.Millisecond)
+
+	// This doesn't work
+	// data.Todos[1] = "UPDATE: Take out the papers and the trash"
+
+	// This doesn't work either
+	// data.Get("todos").Set(1, "UPDATE: Take out the papers and the trash")
+
+	// Nor this
+	// hvue.Set(data.Todos, 1, "UPDATE: Take out the papers and the trash")
+
+	// You have to use hvue.Set (a wrapper for Vue.set) on the raw JS array.
+	hvue.Set(data.Get("todos"), 1, "UPDATE: Take out the papers and the trash")
 }
 
 func (d *Data3) AddNewTodo() {

@@ -25,8 +25,7 @@ func NewData(message string) *Data {
 	return d
 }
 
-func (d *Data) ReverseMessage(event *js.Object) {
-	// event ignored
+func (d *Data) ReverseMessage() {
 	d.Message = reverse(d.Message)
 }
 
