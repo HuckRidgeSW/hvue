@@ -6,10 +6,13 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+var o = func() *js.Object { return js.Global.Get("Object").New() }
+
 type VM struct {
 	*js.Object
 }
 
+var jsOType = reflect.TypeOf(o())
 var vmType = reflect.TypeOf(&VM{})
 
 // NewVM returns a new vm, analogous to Javascript `new Vue(...)`.  See
@@ -67,6 +70,8 @@ func DataS(value interface{}) option {
 // is an instance of.  Call it like MethodsOf(&SomeType{}).  SomeType must be
 // a pure Javascript object, with no Go fields.  That is, all slots just have
 // `js:"..."` tags.
+//
+// If a method wants a pointer to its vm, use
 func MethodsOf(t interface{}) option {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
@@ -90,6 +95,13 @@ func MethodsOf(t interface{}) option {
 			// Get the i'th method's reflect.Method
 			m := typ.Method(i)
 
+			// Pre-compute some stuff that'd be the same for all calls of this
+			// method.
+			numIn := m.Type.NumIn()
+			// If the 2nd arg (the *first* arg if you don't count the receiver)
+			// expects a *VM, pass `this`.
+			doVM := numIn > 1 && m.Type.In(1) == vmType
+
 			c.Methods.Set(m.Name,
 				js.MakeFunc(
 					func(this *js.Object, jsArgs []*js.Object) interface{} {
@@ -98,20 +110,45 @@ func MethodsOf(t interface{}) option {
 						receiver.Elem().Field(0).Set(reflect.ValueOf(c.Data))
 
 						// Construct the arglist
-						goArgs := make([]reflect.Value, m.Type.NumIn())
+						goArgs := make([]reflect.Value, numIn)
 						goArgs[0] = receiver
 						i := 1
 
-						// If the 2nd arg (the *first* arg if you don't include the
-						// receiver) expects a *VM, pass `this`.
-						if m.Type.NumIn() > 1 && m.Type.In(1) == vmType {
+						if doVM {
 							vm := &VM{Object: this}
 							goArgs[1] = reflect.ValueOf(vm)
-							i = 2
+							i++
 						}
 
-						for j := 0; j < len(jsArgs); i, j = i+1, j+1 {
-							goArgs[i] = reflect.ValueOf(jsArgs[j])
+						for j := 0; j < len(jsArgs) && i < numIn; i, j = i+1, j+1 {
+							switch m.Type.In(i).Kind() {
+							case reflect.Ptr:
+								inPtrType := m.Type.In(i)
+								if inPtrType == jsOType {
+									// A *js.Object
+									goArgs[i] = reflect.ValueOf(jsArgs[j])
+								} else {
+									// A pointer to a struct with first field of type
+									// *js.Object.
+									inType := inPtrType.Elem()
+									inArg := reflect.New(inType)
+									inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[j]))
+									goArgs[i] = inArg
+								}
+							case reflect.String:
+								goArgs[i] = reflect.ValueOf(jsArgs[j].String())
+							case reflect.Bool:
+								goArgs[i] = reflect.ValueOf(jsArgs[j].Bool())
+							case reflect.Float64:
+								goArgs[i] = reflect.ValueOf(jsArgs[j].Float())
+							case reflect.Int32, reflect.Int:
+								goArgs[i] = reflect.ValueOf(jsArgs[j].Int())
+							case reflect.Int64:
+								goArgs[i] = reflect.ValueOf(jsArgs[j].Int64())
+							default:
+								panic("Unknown type in arglist for " +
+									m.Name + ": " + m.Type.In(i).Kind().String())
+							}
 						}
 
 						result := m.Func.Call(goArgs)
