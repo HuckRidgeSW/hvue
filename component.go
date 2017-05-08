@@ -3,9 +3,18 @@ package hvue
 import "github.com/gopherjs/gopherjs/js"
 
 func NewComponent(name string, opts ...option) {
-	c := &Config{Object: NewObject()}
+	c := &Config{Object: o()}
 	c.Option(opts...)
 	js.Global.Get("Vue").Call("component", name, c.Object)
+}
+
+func Component(name string, data interface{}) option {
+	return func(c *Config) {
+		if c.Components == js.Undefined {
+			c.Components = o()
+		}
+		c.Components.Set(name, data)
+	}
 }
 
 func Props(props ...string) option {

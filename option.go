@@ -8,12 +8,13 @@ import (
 
 type Config struct {
 	*js.Object
-	El       string     `js:"el"`
-	Data     *js.Object `js:"data"`
-	Methods  *js.Object `js:"methods"`
-	Props    *js.Object `js:"props"`
-	Template string     `js:"template"`
-	Computed *js.Object `js:"computed"`
+	El         string     `js:"el"`
+	Data       *js.Object `js:"data"`
+	Methods    *js.Object `js:"methods"`
+	Props      *js.Object `js:"props"`
+	Template   string     `js:"template"`
+	Computed   *js.Object `js:"computed"`
+	Components *js.Object `js:"components"`
 
 	dataValue reflect.Value
 }
