@@ -21,7 +21,7 @@ var vmType = reflect.TypeOf(&VM{})
 // for discussions of how the options work, and also see the examples tree.
 //
 // If you use a data object (via DataS) and it has a VM field, it's set to
-// this new VM.
+// this new VM.  TODO: Verify that the VM field is of type *hvue.VM.
 func NewVM(opts ...option) *VM {
 	c := &Config{Object: NewObject()}
 	c.Option(opts...)
@@ -58,11 +58,24 @@ func Data(name string, value interface{}) option {
 func DataS(value interface{}) option {
 	return func(c *Config) {
 		if c.Data != js.Undefined {
-			panic("Cannot use hvue.Data and hvue.DataS together")
-			c.Data = NewObject()
+			panic("Cannot use hvue.DataS together with any other Data* options")
 		}
 		c.Object.Set("data", value)
 		c.dataValue = reflect.ValueOf(value).Elem()
+	}
+}
+
+func DataFunc(f func(*VM) interface{}) option {
+	return func(c *Config) {
+		if c.Data != js.Undefined {
+			panic("Cannot use hvue.DataFunc together with any other Data* options")
+		}
+
+		c.Object.Set("data", js.MakeFunc(
+			func(this *js.Object, jsArgs []*js.Object) interface{} {
+				vm := &VM{Object: this}
+				return f(vm)
+			}))
 	}
 }
 

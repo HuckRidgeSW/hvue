@@ -25,12 +25,13 @@ func Set(o, key, value interface{}) interface{} {
 	return value
 }
 
-func Construct(t interface{}) interface{} {
+func NewT(t interface{}) interface{} {
 	io := js.InternalObject(t)
 	valueOfT := reflect.ValueOf(t).Elem()
 
 	// If the first field (assumed to be the *js.Object field) is set, just
-	// return t unchanged.  Does no other error checking.
+	// return t unchanged.  Does no other error checking.  Should really check
+	// for non-js fields and panic if it finds them.
 	f0Name := valueOfT.Type().Field(0).Name
 	if io.Get(f0Name) != nil {
 		return t
