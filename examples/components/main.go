@@ -14,6 +14,8 @@ func main() {
 	go aRegularComponent()
 	go localRegistration()
 	go dataMustBeAFunction()
+	go passDataWithProps()
+	go propValidation()
 }
 
 func aRegularComponent() {
@@ -66,4 +68,59 @@ func dataMustBeAFunction() {
 			return hvue.NewT(&DataT{counter: 0}).(*DataT)
 		}))
 	hvue.NewVM(hvue.El("#example-2-b"))
+}
+
+// https://vuejs.org/v2/guide/components.html#Passing-Data-with-Props
+func passDataWithProps() {
+	hvue.NewComponent("child",
+		hvue.Props("message"),
+		hvue.Template(`<span>{{ message }}</span>`))
+	hvue.NewVM(hvue.El("#example-3"))
+}
+
+// https://vuejs.org/v2/guide/components.html#Prop-Validation
+func propValidation() {
+	/*
+	   Vue.component('example', {
+	     props: {
+	       // basic type check (`null` means accept any type)
+	       propA: Number,
+	       // multiple possible types
+	       propB: [String, Number],
+	       // a required string
+	       propC: {
+	         type: String,
+	         required: true
+	       },
+	       // a number with default value
+	       propD: {
+	         type: Number,
+	         default: 100
+	       },
+	       // object/array defaults should be returned from a
+	       // factory function
+	       propE: {
+	         type: Object,
+	         default: function () {
+	           return { message: 'hello' }
+	         }
+	       },
+	       // custom validator function
+	       propF: {
+	         validator: function (value) {
+	           return value > 10
+	         }
+	       }
+	     }
+	   })
+	*/
+	hvue.NewComponent("child2",
+		hvue.Template(`
+		<div>propA: {{ propA }}</div>
+		`),
+		hvue.PropObj("propA",
+			hvue.Types(hvue.PNumber)))
+	hvue.NewVM(
+		hvue.El("#example-4"),
+	)
 }

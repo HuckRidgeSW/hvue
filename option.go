@@ -27,3 +27,31 @@ func (c *Config) Option(opts ...option) {
 		opt(c)
 	}
 }
+
+type pOption func(*propConfig)
+
+type propConfig struct {
+	*js.Object
+	typ       *js.Object `js:"type"`
+	required  bool       `js:"required"`
+	def       *js.Object `js:"default"`
+	validator *js.Object `js:"validator"`
+}
+
+func (p *propConfig) Option(opts ...pOption) {
+	for _, opt := range opts {
+		opt(p)
+	}
+}
+
+type pOptionType int
+
+const (
+	PString   pOptionType = iota
+	PNumber               = iota
+	PBoolean              = iota
+	PFunction             = iota
+	PObject               = iota
+	PArray                = iota
+	// Not sure how to do custom types yet
+)
