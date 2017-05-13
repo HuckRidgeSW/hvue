@@ -71,11 +71,7 @@ func DataFunc(f func(*VM) interface{}) option {
 			panic("Cannot use hvue.DataFunc together with any other Data* options")
 		}
 
-		c.Object.Set("data", js.MakeFunc(
-			func(this *js.Object, jsArgs []*js.Object) interface{} {
-				vm := &VM{Object: this}
-				return f(vm)
-			}))
+		c.Object.Set("data", jsCallWithVM(f))
 	}
 }
 

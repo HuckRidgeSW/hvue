@@ -32,10 +32,10 @@ type pOption func(*propConfig)
 
 type propConfig struct {
 	*js.Object
-	typ       *js.Object `js:"type"`
-	required  bool       `js:"required"`
-	def       *js.Object `js:"default"`
-	validator *js.Object `js:"validator"`
+	typ       *js.Object  `js:"type"`
+	required  bool        `js:"required"`
+	def       interface{} `js:"default"`
+	validator *js.Object  `js:"validator"`
 }
 
 func (p *propConfig) Option(opts ...pOption) {

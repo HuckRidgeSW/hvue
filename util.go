@@ -55,3 +55,11 @@ func NewT(t interface{}) interface{} {
 	valueOfT.Field(0).Set(reflect.ValueOf(obj))
 	return t
 }
+
+func jsCallWithVM(f func(*VM) interface{}) *js.Object {
+	return js.MakeFunc(
+		func(this *js.Object, args []*js.Object) interface{} {
+			vm := &VM{Object: this}
+			return f(vm)
+		})
+}

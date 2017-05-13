@@ -31,13 +31,15 @@ func Props(props ...string) option {
 func PropObj(prop string, opts ...pOption) option {
 	println("PropObj")
 	return func(c *Config) {
-		if c.Props != js.Undefined {
-			panic("Cannot use Props and PropsO in the same component")
+		if c.Props == js.Undefined {
+			c.Props = o()
 		}
+
 		pO := &propConfig{Object: o()}
 		pO.Option(opts...)
-		c.Props = o()
+
 		c.Props.Set(prop, pO.Object)
+
 		println("c.Props:", c.Props)
 	}
 }
@@ -73,34 +75,30 @@ func Types(types ...pOptionType) pOption {
 	}
 }
 
-func Required() pOption {
+var Required pOption = func(p *propConfig) {
+	p.required = true
+}
+
+func Default(def interface{}) pOption {
 	return func(p *propConfig) {
-		p.required = true
+		p.def = def
 	}
 }
 
-func Default(def int) pOption {
+func DefaultFunc(def func(*VM) interface{}) pOption {
 	return func(p *propConfig) {
-		p.def = js.Global.Get("Object").New(def)
+		p.def = jsCallWithVM(def)
 	}
 }
 
-func DefaultFunc(f func(*VM) interface{}) pOption {
-	return func(p *propConfig) {
-		p.def = js.MakeFunc(
-			func(this *js.Object, args []*js.Object) interface{} {
-				vm := &VM{Object: this}
-				return f(vm)
-			})
-	}
-}
-
-func Validator(f func(*VM) interface{}) pOption {
+// Validator functions generate warnings in the JS console if using the
+// vue.js development build.
+func Validator(f func(vm *VM, value *js.Object) interface{}) pOption {
 	return func(p *propConfig) {
 		p.validator = js.MakeFunc(
 			func(this *js.Object, args []*js.Object) interface{} {
 				vm := &VM{Object: this}
-				return f(vm)
+				return f(vm, args[0])
 			})
 	}
 }

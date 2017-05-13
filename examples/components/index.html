@@ -41,7 +41,16 @@
 	<hr>
 
 	<div id="example-4">
-		<child2 :prop-a="10"></child2>
+		<!--
+	  Note camelCase in the Go: "propA" and so on.
+	  prop-a is :prop-a (shorthand for v-bind:prop-a), so the 10 is evaluated.
+	  prop-b is not, so it's just a string.  If you say :prop-b, foo is assumed
+	  to be a method on the vm and called as a function.
+	  prop-f fails validation.  See the JS console for the warning.
+		-->
+		<child2 :prop-a="10" prop-b="foo" prop-c="bar"
+				  :prop-f="9"
+		></child2>
 	</div>
 </body>
 

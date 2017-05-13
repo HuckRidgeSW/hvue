@@ -80,47 +80,36 @@ func passDataWithProps() {
 
 // https://vuejs.org/v2/guide/components.html#Prop-Validation
 func propValidation() {
-	/*
-	   Vue.component('example', {
-	     props: {
-	       // basic type check (`null` means accept any type)
-	       propA: Number,
-	       // multiple possible types
-	       propB: [String, Number],
-	       // a required string
-	       propC: {
-	         type: String,
-	         required: true
-	       },
-	       // a number with default value
-	       propD: {
-	         type: Number,
-	         default: 100
-	       },
-	       // object/array defaults should be returned from a
-	       // factory function
-	       propE: {
-	         type: Object,
-	         default: function () {
-	           return { message: 'hello' }
-	         }
-	       },
-	       // custom validator function
-	       propF: {
-	         validator: function (value) {
-	           return value > 10
-	         }
-	       }
-	     }
-	   })
-	*/
 	hvue.NewComponent("child2",
 		hvue.Template(`
-		<div>propA: {{ propA }}</div>
+		<div>
+			<div>propA: {{ propA }}</div>
+			<div>propB: {{ propB }}</div>
+			<div>propC: {{ propC }}</div>
+			<div>propD: {{ propD }}</div>
+			<div>propE: {{ propE.message }}</div>
+			<div>propF: {{ propF }}</div>
+		</div>
 		`),
+		// Note kebab-case in the HTML: "prop-a" and so on.
 		hvue.PropObj("propA",
-			hvue.Types(hvue.PNumber)))
-	hvue.NewVM(
-		hvue.El("#example-4"),
+			hvue.Types(hvue.PNumber)),
+		hvue.PropObj("propB",
+			hvue.Types(hvue.PString, hvue.PNumber)),
+		hvue.PropObj("propC",
+			hvue.Types(hvue.PString), hvue.Required),
+		hvue.PropObj("propD",
+			hvue.Types(hvue.PNumber),
+			hvue.Default(100)),
+		hvue.PropObj("propE",
+			hvue.Types(hvue.PObject),
+			hvue.DefaultFunc(func(*hvue.VM) interface{} {
+				return js.M{"message": "hello"}
+			})),
+		hvue.PropObj("propF",
+			hvue.Validator(func(vm *hvue.VM, value *js.Object) interface{} {
+				return value.Int() > 10
+			})),
 	)
+	hvue.NewVM(hvue.El("#example-4"))
 }

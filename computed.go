@@ -11,12 +11,7 @@ func Computed(name string, f func(vm *VM) interface{}) option {
 		if c.Computed == js.Undefined {
 			c.Computed = NewObject()
 		}
-		c.Computed.Set(name,
-			js.MakeFunc(
-				func(this *js.Object, _ []*js.Object) interface{} {
-					vm := &VM{Object: this}
-					return f(vm)
-				}))
+		c.Computed.Set(name, jsCallWithVM(f))
 	}
 }
 
@@ -31,11 +26,7 @@ func ComputedWithGetSet(name string, get func(vm *VM) interface{}, set func(vm *
 		}
 		c.Computed.Set(name,
 			js.M{
-				"get": js.MakeFunc(
-					func(this *js.Object, _ []*js.Object) interface{} {
-						vm := &VM{Object: this}
-						return get(vm)
-					}),
+				"get": jsCallWithVM(get),
 				"set": js.MakeFunc(
 					func(this *js.Object, args []*js.Object) interface{} {
 						vm := &VM{Object: this}
