@@ -25,6 +25,10 @@ func Set(o, key, value interface{}) interface{} {
 	return value
 }
 
+// Warning: Doesn't work with complex types.  Not sure exactly what that means
+// yet, but it means at least that it doesn't work with fields of type
+// []string, or probably anything that's not a "basic" type such as int,
+// float, string, etc.
 func NewT(t interface{}) interface{} {
 	io := js.InternalObject(t)
 	valueOfT := reflect.ValueOf(t).Elem()

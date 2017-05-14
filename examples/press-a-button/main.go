@@ -15,14 +15,8 @@ type Data struct {
 func main() {
 	hvue.NewVM(
 		hvue.El("#app-5"),
-		hvue.DataS(NewData("Hello, Vue!")),
+		hvue.DataS(hvue.NewT(&Data{Message: "Hello, Vue!"})),
 		hvue.MethodsOf(&Data{}))
-}
-
-func NewData(message string) *Data {
-	d := &Data{Object: js.Global.Get("Object").New()}
-	d.Message = message
-	return d
 }
 
 func (d *Data) ReverseMessage() {

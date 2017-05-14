@@ -29,18 +29,13 @@ func Props(props ...string) option {
 }
 
 func PropObj(prop string, opts ...pOption) option {
-	println("PropObj")
 	return func(c *Config) {
 		if c.Props == js.Undefined {
 			c.Props = o()
 		}
-
 		pO := &propConfig{Object: o()}
 		pO.Option(opts...)
-
 		c.Props.Set(prop, pO.Object)
-
-		println("c.Props:", c.Props)
 	}
 }
 

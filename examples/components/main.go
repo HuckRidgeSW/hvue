@@ -16,6 +16,7 @@ func main() {
 	go dataMustBeAFunction()
 	go passDataWithProps()
 	go propValidation()
+	go counterEvent()
 }
 
 func aRegularComponent() {
@@ -65,6 +66,8 @@ func dataMustBeAFunction() {
 		hvue.Template(`<button v-on:click="counter += 1">{{ counter }}</button>`),
 		// Return a different object for each component
 		hvue.DataFunc(func(*hvue.VM) interface{} {
+			// You *can* do the type-assert to its actual type, but you don't
+			// *have* to.
 			return hvue.NewT(&DataT{counter: 0}).(*DataT)
 		}))
 	hvue.NewVM(hvue.El("#example-2-b"))
@@ -112,4 +115,37 @@ func propValidation() {
 			})),
 	)
 	hvue.NewVM(hvue.El("#example-4"))
+}
+
+type ButtonCounterT struct {
+	*js.Object
+	Counter int `js:"counter"`
+}
+
+type CounterEventT struct {
+	*js.Object
+	Total int `js:"total"`
+}
+
+func counterEvent() {
+	hvue.NewComponent("button-counter",
+		hvue.Template(`<button v-on:click="Increment">{{ counter }}</button>`),
+		hvue.DataFunc(func(*hvue.VM) interface{} {
+			return hvue.NewT(&ButtonCounterT{Counter: 0})
+		}),
+		hvue.MethodsOf(&ButtonCounterT{}))
+	hvue.NewVM(
+		hvue.El("#counter-event-example"),
+		hvue.Data("total", 0),
+		hvue.MethodsOf(&CounterEventT{}))
+}
+
+func (o *ButtonCounterT) Increment(vm *hvue.VM) {
+	o.Counter++
+	vm.Emit("increment")
+
+}
+
+func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
+	o.Total++
 }

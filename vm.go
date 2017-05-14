@@ -60,6 +60,10 @@ func DataS(value interface{}) option {
 		if c.Data != js.Undefined {
 			panic("Cannot use hvue.DataS together with any other Data* options")
 		}
+		// Can't say `c.Data = value` because c.Data is a *js.Object, and value
+		// is an interface{}.  Its underlying type must be a pointer to a
+		// js-special struct, but we can't get at that struct's Object field
+		// without a bunch of reflection, so take this shortcut.
 		c.Object.Set("data", value)
 		c.dataValue = reflect.ValueOf(value).Elem()
 	}
@@ -70,7 +74,7 @@ func DataFunc(f func(*VM) interface{}) option {
 		if c.Data != js.Undefined {
 			panic("Cannot use hvue.DataFunc together with any other Data* options")
 		}
-
+		// See comment about c.Data in DataS().
 		c.Object.Set("data", jsCallWithVM(f))
 	}
 }
@@ -114,9 +118,9 @@ func MethodsOf(t interface{}) option {
 			c.Methods.Set(m.Name,
 				js.MakeFunc(
 					func(this *js.Object, jsArgs []*js.Object) interface{} {
-						// Set the receiver's Object slot to c.Data.  receiver is a
-						// pointer so you have to dereference it with Elem().
-						receiver.Elem().Field(0).Set(reflect.ValueOf(c.Data))
+						// Set the receiver's Object slot to vm.$data.  receiver is
+						// a pointer so you have to dereference it with Elem().
+						receiver.Elem().Field(0).Set(reflect.ValueOf(this.Get("$data")))
 
 						// Construct the arglist
 						goArgs := make([]reflect.Value, numIn)
@@ -171,4 +175,8 @@ func MethodsOf(t interface{}) option {
 					}))
 		}
 	}
+}
+
+func (vm *VM) Emit(event string) {
+	vm.Call("$emit", event)
 }
