@@ -16,7 +16,7 @@ var (
 	jsOType     = reflect.TypeOf(o())
 	vmType      = reflect.TypeOf(&VM{})
 	dataObjects = map[int]interface{}{}
-	dataID      = 1
+	nextDataID  = 1
 )
 
 // NewVM returns a new vm, analogous to Javascript `new Vue(...)`.  See
@@ -72,12 +72,7 @@ func DataS(value interface{}) option {
 		// without a bunch of reflection, so take this shortcut.
 		c.Object.Set("data", value)
 		c.dataValue = reflect.ValueOf(value).Elem()
-
-		// Store a data object ID in the data object, for later reference.
-		c.Object.Get("data").Set("hvue_dataID", dataID)
-		// Store the Go data object, indexed by dataID
-		dataObjects[dataID] = value
-		dataID++
+		storeDataID(c.Object.Get("data"), value, c)
 	}
 }
 
@@ -108,21 +103,30 @@ func DataFunc(f func(*VM) interface{}) option {
 			for i.Type() != jsOType {
 				i = i.Elem().Field(0)
 			}
-
-			// Store a data object ID in the data object, for later reference.
-			//
-			// This wouldn't work if the *js.Object is sealed or not "plain" (like
-			// WebSocket).  But on the other hand, Vue won't work with non-plain
-			// or sealed objects, so it doesn't matter.
-			i.Interface().(*js.Object).Set("hvue_dataID", dataID)
-
-			// Store the Go data object, indexed by dataID
-			dataObjects[dataID] = value
-			dataID++
-
+			storeDataID(i.Interface().(*js.Object), value, c)
 			return value
 		}))
 	}
+}
+
+// Store a data object ID in the data object, for later reference.
+//
+// This wouldn't work if the *js.Object is sealed or not "plain" (like
+// WebSocket).  But on the other hand, Vue won't work with non-plain or sealed
+// objects, so it doesn't matter.
+func storeDataID(o *js.Object, value interface{}, c *Config) {
+	curID := nextDataID // small race condition here
+	nextDataID++
+	o.Set("hvue_dataID", curID)
+
+	// Store the Go data object, indexed by curID
+	dataObjects[curID] = value
+
+	// Schedule it to be deleted when the vm is deleted
+	Destroyed(func(*VM) {
+		delete(dataObjects, curID)
+	})(c)
+
 }
 
 // MethodsOf sets up vm.methods with the exported methods of the type that t
@@ -167,11 +171,14 @@ func MethodsOf(t interface{}) option {
 							// FIXME: A better error here would be great, Mmmkay?
 							panic("Unknown dataID")
 						}
-						receiver := reflect.ValueOf(dataObjects[dataID])
+						receiver, ok := dataObjects[dataID]
+						if !ok {
+							panic("Unknown dataID")
+						}
 
 						// Construct the arglist
 						goArgs := make([]reflect.Value, numIn)
-						goArgs[0] = receiver
+						goArgs[0] = reflect.ValueOf(receiver)
 						i := 1
 
 						if doVM {

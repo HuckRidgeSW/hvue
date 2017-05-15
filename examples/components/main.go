@@ -124,7 +124,8 @@ type ButtonCounterT struct {
 
 type CounterEventT struct {
 	*js.Object
-	Total int `js:"total"`
+	Total int  `js:"total"`
+	There bool `js:"there"`
 }
 
 func counterEvent() {
@@ -136,7 +137,7 @@ func counterEvent() {
 		hvue.MethodsOf(&ButtonCounterT{}))
 	hvue.NewVM(
 		hvue.El("#counter-event-example"),
-		hvue.DataS(hvue.NewT(&CounterEventT{Total: 0})),
+		hvue.DataS(hvue.NewT(&CounterEventT{Total: 0, There: true})),
 		hvue.MethodsOf(&CounterEventT{}))
 }
 
