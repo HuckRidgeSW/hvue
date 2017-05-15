@@ -12,8 +12,12 @@ type VM struct {
 	*js.Object
 }
 
-var jsOType = reflect.TypeOf(o())
-var vmType = reflect.TypeOf(&VM{})
+var (
+	jsOType     = reflect.TypeOf(o())
+	vmType      = reflect.TypeOf(&VM{})
+	dataObjects = map[int]interface{}{}
+	dataID      = 1
+)
 
 // NewVM returns a new vm, analogous to Javascript `new Vue(...)`.  See
 // https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis and
@@ -43,6 +47,8 @@ func El(selector string) option {
 
 // Data sets a single data field.  Data can be called multiple times for the
 // same vm.
+//
+// FIXME: You can't use MethodsOf with this function.
 func Data(name string, value interface{}) option {
 	return func(c *Config) {
 		if c.Data == js.Undefined {
@@ -66,16 +72,56 @@ func DataS(value interface{}) option {
 		// without a bunch of reflection, so take this shortcut.
 		c.Object.Set("data", value)
 		c.dataValue = reflect.ValueOf(value).Elem()
+
+		// Store a data object ID in the data object, for later reference.
+		c.Object.Get("data").Set("hvue_dataID", dataID)
+		// Store the Go data object, indexed by dataID
+		dataObjects[dataID] = value
+		dataID++
 	}
 }
 
+// DataFunc defines a function that returns a new data object.  You have to
+// use DataFunc with Components, not Data or DataS.
+//
+// Note that this function is called when the VM or component is created
+// (https://vuejs.org/v2/api/#created), not when you call "NewVM".  This means
+// that you can't, for example, get clever and try to use the same object here
+// as with MethodsOf.  MethodsOf requires an object when you call NewVM to
+// reguster the VM, long before the VM is actually created or bound; this is
+// called every time a new VM or component is created.
 func DataFunc(f func(*VM) interface{}) option {
 	return func(c *Config) {
 		if c.Data != js.Undefined {
 			panic("Cannot use hvue.DataFunc together with any other Data* options")
 		}
 		// See comment about c.Data in DataS().
-		c.Object.Set("data", jsCallWithVM(f))
+		c.Object.Set("data", jsCallWithVM(func(vm *VM) interface{} {
+			// Get the new data object
+			value := f(vm)
+
+			// Find the *js.Object in field 0, however deep.
+			// FIXME: If the types are wrong at any point (not pointer to a
+			// struct at each level), then this'll fail with a
+			// probably-not-very-clear error message.
+			i := reflect.ValueOf(value).Elem().Field(0)
+			for i.Type() != jsOType {
+				i = i.Elem().Field(0)
+			}
+
+			// Store a data object ID in the data object, for later reference.
+			//
+			// This wouldn't work if the *js.Object is sealed or not "plain" (like
+			// WebSocket).  But on the other hand, Vue won't work with non-plain
+			// or sealed objects, so it doesn't matter.
+			i.Interface().(*js.Object).Set("hvue_dataID", dataID)
+
+			// Store the Go data object, indexed by dataID
+			dataObjects[dataID] = value
+			dataID++
+
+			return value
+		}))
 	}
 }
 
@@ -85,6 +131,8 @@ func DataFunc(f func(*VM) interface{}) option {
 // `js:"..."` tags.
 //
 // If a method wants a pointer to its vm, use a *VM as the first argument.
+//
+// You can't use MethodsOf with Data(), only with DataS or DataFunc().
 func MethodsOf(t interface{}) option {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
@@ -96,12 +144,6 @@ func MethodsOf(t interface{}) option {
 		if typ.Kind() != reflect.Ptr {
 			panic("Item passed to MethodsOf must be a pointer")
 		}
-
-		// Create a new receiver.  "Same" receiver used for all methods, with
-		// its Object slot set differently(?) each time.  typ is a pointer type
-		// so you have to get the type of the thing it points to with Elem() and
-		// create a new one of those.
-		receiver := reflect.New(typ.Elem())
 
 		// Loop through all methods of the type
 		for i := 0; i < typ.NumMethod(); i++ {
@@ -118,9 +160,14 @@ func MethodsOf(t interface{}) option {
 			c.Methods.Set(m.Name,
 				js.MakeFunc(
 					func(this *js.Object, jsArgs []*js.Object) interface{} {
-						// Set the receiver's Object slot to vm.$data.  receiver is
-						// a pointer so you have to dereference it with Elem().
-						receiver.Elem().Field(0).Set(reflect.ValueOf(this.Get("$data")))
+						// Lookup the receiver in dataObjects, based on
+						// $data.hvue_dataID
+						dataID := this.Get("$data").Get("hvue_dataID").Int()
+						if dataID == 0 {
+							// FIXME: A better error here would be great, Mmmkay?
+							panic("Unknown dataID")
+						}
+						receiver := reflect.ValueOf(dataObjects[dataID])
 
 						// Construct the arglist
 						goArgs := make([]reflect.Value, numIn)

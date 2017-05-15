@@ -136,7 +136,7 @@ func counterEvent() {
 		hvue.MethodsOf(&ButtonCounterT{}))
 	hvue.NewVM(
 		hvue.El("#counter-event-example"),
-		hvue.Data("total", 0),
+		hvue.DataS(hvue.NewT(&CounterEventT{Total: 0})),
 		hvue.MethodsOf(&CounterEventT{}))
 }
 
