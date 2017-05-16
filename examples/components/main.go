@@ -17,7 +17,10 @@ func main() {
 	go passDataWithProps()
 	go propValidation()
 	go counterEvent()
+	go counterEventWithChannel()
 }
+
+////////////////////////////////////////////////////////////////////
 
 func aRegularComponent() {
 	hvue.NewComponent("my-component",
@@ -25,6 +28,8 @@ func aRegularComponent() {
 	hvue.NewVM(
 		hvue.El("#example"))
 }
+
+////////////////////////////////////////////////////////////////////
 
 func localRegistration() {
 	// Local registration
@@ -39,6 +44,8 @@ func localRegistration() {
 		hvue.El("#example-a"),
 		hvue.Component("my-component", Child))
 }
+
+////////////////////////////////////////////////////////////////////
 
 func dataMustBeAFunction() {
 	type DataT struct {
@@ -73,6 +80,8 @@ func dataMustBeAFunction() {
 	hvue.NewVM(hvue.El("#example-2-b"))
 }
 
+////////////////////////////////////////////////////////////////////
+
 // https://vuejs.org/v2/guide/components.html#Passing-Data-with-Props
 func passDataWithProps() {
 	hvue.NewComponent("child",
@@ -80,6 +89,8 @@ func passDataWithProps() {
 		hvue.Template(`<span>{{ message }}</span>`))
 	hvue.NewVM(hvue.El("#example-3"))
 }
+
+////////////////////////////////////////////////////////////////////
 
 // https://vuejs.org/v2/guide/components.html#Prop-Validation
 func propValidation() {
@@ -117,6 +128,9 @@ func propValidation() {
 	hvue.NewVM(hvue.El("#example-4"))
 }
 
+////////////////////////////////////////////////////////////////////
+
+// https://vuejs.org/v2/guide/components.html#Using-v-on-with-Custom-Events
 type ButtonCounterT struct {
 	*js.Object
 	Counter int `js:"counter"`
@@ -124,8 +138,7 @@ type ButtonCounterT struct {
 
 type CounterEventT struct {
 	*js.Object
-	Total int  `js:"total"`
-	There bool `js:"there"`
+	Total int `js:"total"`
 }
 
 func counterEvent() {
@@ -137,7 +150,7 @@ func counterEvent() {
 		hvue.MethodsOf(&ButtonCounterT{}))
 	hvue.NewVM(
 		hvue.El("#counter-event-example"),
-		hvue.DataS(hvue.NewT(&CounterEventT{Total: 0, There: true})),
+		hvue.DataS(hvue.NewT(&CounterEventT{Total: 0})),
 		hvue.MethodsOf(&CounterEventT{}))
 }
 
@@ -150,3 +163,63 @@ func (o *ButtonCounterT) Increment(vm *hvue.VM) {
 func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
 	o.Total++
 }
+
+////////////////////////////////////////////////////////////////////
+
+// https://vuejs.org/v2/guide/components.html#Using-v-on-with-Custom-Events
+// again, but with a channel.
+
+// Note that this is a proof of concept, to show one way to use a channel.
+// This particular way isn't very good, as it just re-implements part of the
+// Vue event model, badly.
+
+type ButtonCounterWithChannelT struct {
+	*js.Object
+	Counter int `js:"counter"`
+	eventCh chan string
+}
+
+// Reused from above
+// type CounterEventT struct {
+// 	*js.Object
+// 	Total int `js:"total"`
+// }
+
+func counterEventWithChannel() {
+	eventCh := make(chan string)
+	hvue.NewComponent("button-counter-with-channel",
+		hvue.Template(`<button v-on:click="Increment">{{ counter }}</button>`),
+		hvue.DataFunc(func(*hvue.VM) interface{} {
+			return hvue.NewT(&ButtonCounterWithChannelT{
+				Counter: 0,
+				eventCh: eventCh,
+			})
+		}),
+		hvue.MethodsOf(&ButtonCounterWithChannelT{}))
+
+	data := hvue.NewT(&CounterEventT{Total: 0}).(*CounterEventT)
+	vm := hvue.NewVM(
+		hvue.El("#counter-event-example-with-channel"),
+		hvue.DataS(data),
+		hvue.MethodsOf(&CounterEventT{}))
+
+	go func() {
+		for event := range eventCh {
+			switch event {
+			case "increment":
+				data.IncrementTotal(vm)
+			}
+		}
+	}()
+}
+
+func (o *ButtonCounterWithChannelT) Increment(vm *hvue.VM) {
+	o.Counter++
+	o.eventCh <- "increment"
+
+}
+
+// Reused from above
+// func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
+// 	o.Total++
+// }
