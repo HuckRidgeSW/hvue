@@ -129,6 +129,81 @@ func storeDataID(o *js.Object, value interface{}, c *Config) {
 
 }
 
+// FIXME: Method and MethodsOf are very similar and should be combined.
+func Method(name string, f interface{}) option {
+	return func(c *Config) {
+		if c.Methods == js.Undefined {
+			c.Methods = NewObject()
+		}
+
+		m := reflect.ValueOf(f)
+		if m.Kind() != reflect.Func {
+			panic("Method " + name + " is not a func")
+		}
+
+		// Pre-compute some stuff that'd be the same for all calls of this
+		// function.
+		numIn := m.Type().NumIn()
+		// If the 2nd arg (the *first* arg if you don't count the receiver)
+		// expects a *VM, pass `this`.
+		doVM := numIn > 0 && m.Type().In(0) == vmType
+
+		c.Methods.Set(name,
+			js.MakeFunc(
+				func(this *js.Object, jsArgs []*js.Object) interface{} {
+					// Construct the arglist
+					goArgs := make([]reflect.Value, numIn)
+					i := 0
+
+					if doVM {
+						vm := &VM{Object: this}
+						goArgs[i] = reflect.ValueOf(vm)
+						i = 1
+					}
+
+					for j := 0; j < len(jsArgs) && i < numIn; i, j = i+1, j+1 {
+						switch m.Type().In(i).Kind() {
+						case reflect.Ptr:
+							inPtrType := m.Type().In(i)
+							if inPtrType == jsOType {
+								// A *js.Object
+								goArgs[i] = reflect.ValueOf(jsArgs[j])
+							} else {
+								// Expects a pointer to a struct with first field
+								// of type *js.Object.
+								inType := inPtrType.Elem()
+								inArg := reflect.New(inType)
+								inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[j]))
+								goArgs[i] = inArg
+							}
+						case reflect.String:
+							goArgs[i] = reflect.ValueOf(jsArgs[j].String())
+						case reflect.Bool:
+							goArgs[i] = reflect.ValueOf(jsArgs[j].Bool())
+						case reflect.Float64:
+							goArgs[i] = reflect.ValueOf(jsArgs[j].Float())
+						case reflect.Int32, reflect.Int:
+							goArgs[i] = reflect.ValueOf(jsArgs[j].Int())
+						case reflect.Int64:
+							goArgs[i] = reflect.ValueOf(jsArgs[j].Int64())
+						default:
+							panic("Unknown type in arglist for " +
+								name + ": " + m.Type().In(i).Kind().String())
+						}
+					}
+
+					result := m.Call(goArgs)
+
+					// I don't think method results are ever actually used, but
+					// I could be wrong.
+					if len(result) >= 1 {
+						return result[0].Interface()
+					}
+					return nil
+				}))
+	}
+}
+
 // MethodsOf sets up vm.methods with the exported methods of the type that t
 // is an instance of.  Call it like MethodsOf(&SomeType{}).  SomeType must be
 // a pure Javascript object, with no Go fields.  That is, all slots just have
@@ -145,8 +220,9 @@ func MethodsOf(t interface{}) option {
 		// Get the type of t
 		typ := reflect.TypeOf(t)
 
-		if typ.Kind() != reflect.Ptr {
-			panic("Item passed to MethodsOf must be a pointer")
+		if typ.Kind() != reflect.Ptr ||
+			typ.Elem().Kind() != reflect.Struct {
+			panic("Item passed to MethodsOf must be a pointer to a struct")
 		}
 
 		// Loop through all methods of the type
@@ -183,8 +259,8 @@ func MethodsOf(t interface{}) option {
 
 						if doVM {
 							vm := &VM{Object: this}
-							goArgs[1] = reflect.ValueOf(vm)
-							i++
+							goArgs[i] = reflect.ValueOf(vm)
+							i = 2
 						}
 
 						for j := 0; j < len(jsArgs) && i < numIn; i, j = i+1, j+1 {
@@ -231,6 +307,11 @@ func MethodsOf(t interface{}) option {
 	}
 }
 
-func (vm *VM) Emit(event string) {
-	vm.Call("$emit", event)
+func (vm *VM) Emit(event string, args ...interface{}) {
+	args = append([]interface{}{event}, args...)
+	vm.Call("$emit", args...)
+}
+
+func (vm *VM) Refs(name string) *js.Object {
+	return vm.Get("$refs").Get(name)
 }

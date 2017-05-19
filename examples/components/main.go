@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/theclapp/hvue"
 )
@@ -18,9 +20,10 @@ func main() {
 	go propValidation()
 	go counterEvent()
 	go counterEventWithChannel()
+	go currencyInput()
 }
 
-////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 func aRegularComponent() {
 	hvue.NewComponent("my-component",
@@ -29,7 +32,7 @@ func aRegularComponent() {
 		hvue.El("#example"))
 }
 
-////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 func localRegistration() {
 	// Local registration
@@ -45,7 +48,7 @@ func localRegistration() {
 		hvue.Component("my-component", Child))
 }
 
-////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 func dataMustBeAFunction() {
 	type DataT struct {
@@ -80,7 +83,7 @@ func dataMustBeAFunction() {
 	hvue.NewVM(hvue.El("#example-2-b"))
 }
 
-////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 // https://vuejs.org/v2/guide/components.html#Passing-Data-with-Props
 func passDataWithProps() {
@@ -90,7 +93,7 @@ func passDataWithProps() {
 	hvue.NewVM(hvue.El("#example-3"))
 }
 
-////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 // https://vuejs.org/v2/guide/components.html#Prop-Validation
 func propValidation() {
@@ -128,9 +131,10 @@ func propValidation() {
 	hvue.NewVM(hvue.El("#example-4"))
 }
 
-////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 // https://vuejs.org/v2/guide/components.html#Using-v-on-with-Custom-Events
+
 type ButtonCounterT struct {
 	*js.Object
 	Counter int `js:"counter"`
@@ -164,7 +168,7 @@ func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
 	o.Total++
 }
 
-////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 // https://vuejs.org/v2/guide/components.html#Using-v-on-with-Custom-Events
 // again, but with a channel.
@@ -223,3 +227,68 @@ func (o *ButtonCounterWithChannelT) Increment(vm *hvue.VM) {
 // func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
 // 	o.Total++
 // }
+
+/////////////////////////////////////////////////////////////////////////
+
+// https://vuejs.org/v2/guide/components.html#Form-Input-Components-using-Custom-Events
+
+type CurrencyData struct {
+	*js.Object
+	Price string `js:"price"`
+}
+
+func currencyInput() {
+	hvue.NewComponent("currency-input",
+		hvue.Template(`
+		<span>
+		  $
+		  <input
+		    ref="input"
+		    v-bind:value="value"
+		    v-on:input="UpdateValue($event.target.value)">
+		</span>
+		`),
+		hvue.Props("value"),
+		hvue.DataFunc(func(*hvue.VM) interface{} {
+			return hvue.NewT(&CurrencyData{})
+		}),
+		// hvue.MethodsOf(&CurrencyData{}),
+		hvue.Method("UpdateValue", func(vm *hvue.VM, value string) {
+			// Remove whitespace on either side
+			formattedValue := strings.TrimSpace(value)
+			formattedValue = formattedValue[:dotPlus3(formattedValue)]
+			// If the value was not already normalized,
+			// manually override it to conform
+			if formattedValue != value {
+				vm.Refs("input").Set("value", formattedValue)
+			}
+			vm.Emit("input", js.Global.Get("Number").Invoke(formattedValue))
+		}),
+	)
+	hvue.NewVM(
+		hvue.El("#currency-input-example"),
+		hvue.DataS(hvue.NewT(&CurrencyData{Price: ""})))
+}
+
+// Instead of updating the value directly, this
+// method is used to format and place constraints
+// on the input's value
+func (_ *CurrencyData) UpdateValue(vm *hvue.VM, value string) {
+	// Remove whitespace on either side
+	formattedValue := strings.TrimSpace(value)
+	formattedValue = formattedValue[:dotPlus3(formattedValue)]
+	// If the value was not already normalized,
+	// manually override it to conform
+	if formattedValue != value {
+		vm.Refs("input").Set("value", formattedValue)
+	}
+	vm.Emit("input", js.Global.Get("Number").Invoke(formattedValue))
+}
+
+func dotPlus3(value string) int {
+	if i := strings.Index(value, "."); i == -1 || i+3 > len(value) {
+		return len(value)
+	} else {
+		return i + 3
+	}
+}
