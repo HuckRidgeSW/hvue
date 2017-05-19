@@ -252,7 +252,13 @@ func currencyInput() {
 		hvue.DataFunc(func(*hvue.VM) interface{} {
 			return hvue.NewT(&CurrencyData{})
 		}),
+
+		// Show two ways of adding the UpdateValue method:
+
+		// #1: Automatically add all methods of *CurrencyData:
 		// hvue.MethodsOf(&CurrencyData{}),
+
+		// #2: Add this closure as a single named method:
 		hvue.Method("UpdateValue", func(vm *hvue.VM, value string) {
 			// Remove whitespace on either side
 			formattedValue := strings.TrimSpace(value)
