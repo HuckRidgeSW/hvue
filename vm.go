@@ -10,6 +10,7 @@ var o = func() *js.Object { return js.Global.Get("Object").New() }
 
 type VM struct {
 	*js.Object
+	Data *js.Object `js:"$data"`
 }
 
 var (
@@ -178,7 +179,7 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 			// Construct the arglist
 			numIn := mType.NumIn()
 			goArgs := make([]reflect.Value, numIn)
-			i := 0
+			goArg := 0
 
 			if isMethod {
 				// Lookup the receiver in dataObjects, based on
@@ -194,43 +195,54 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 				}
 
 				goArgs[0] = reflect.ValueOf(receiver)
-				i = 1
+				goArg = 1
 			}
 
-			for j := 0; j < len(jsArgs) || i < numIn; i, j = i+1, j+1 {
-				switch mType.In(i).Kind() {
+			vmDone := false
+			// We say || in the WHILE clause instead of && because there could be
+			// Go args (like the receiver and a *VM arg) that wouldn't show up in
+			// the JS arglist.
+			for jsArg := 0; jsArg < len(jsArgs) || goArg < numIn; goArg, jsArg = goArg+1, jsArg+1 {
+				if goArg >= numIn {
+					break
+				}
+				switch mType.In(goArg).Kind() {
 				case reflect.Ptr:
-					inPtrType := mType.In(i)
+					inPtrType := mType.In(goArg)
 					switch inPtrType {
 					case jsOType:
 						// A *js.Object
-						goArgs[i] = reflect.ValueOf(jsArgs[j])
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg])
 					case vmType:
 						// A *VM
-						goArgs[i] = reflect.ValueOf(&VM{Object: this})
-						j--
+						if vmDone {
+							panic("Only a single *hvue.VM arg expected per method: " + name)
+						}
+						goArgs[goArg] = reflect.ValueOf(&VM{Object: this})
+						jsArg--
+						vmDone = true
 					default:
 						// Expects a pointer to a struct with first field
 						// of type *js.Object.  Doesn't work yet with nested
 						// structs.
 						inType := inPtrType.Elem()
 						inArg := reflect.New(inType)
-						inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[j]))
-						goArgs[i] = inArg
+						inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[jsArg]))
+						goArgs[goArg] = inArg
 					}
 				case reflect.String:
-					goArgs[i] = reflect.ValueOf(jsArgs[j].String())
+					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].String())
 				case reflect.Bool:
-					goArgs[i] = reflect.ValueOf(jsArgs[j].Bool())
+					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Bool())
 				case reflect.Float64:
-					goArgs[i] = reflect.ValueOf(jsArgs[j].Float())
+					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Float())
 				case reflect.Int32, reflect.Int:
-					goArgs[i] = reflect.ValueOf(jsArgs[j].Int())
+					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Int())
 				case reflect.Int64:
-					goArgs[i] = reflect.ValueOf(jsArgs[j].Int64())
+					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Int64())
 				default:
 					panic("Unknown type in arglist for " +
-						name + ": " + mType.In(i).Kind().String())
+						name + ": " + mType.In(goArg).Kind().String())
 				}
 			}
 
@@ -252,4 +264,17 @@ func (vm *VM) Emit(event string, args ...interface{}) {
 
 func (vm *VM) Refs(name string) *js.Object {
 	return vm.Get("$refs").Get(name)
+}
+
+func (vm *VM) GetData() interface{} {
+	dataID := vm.Data.Get("hvue_dataID").Int()
+	if dataID == 0 {
+		// FIXME: A better error here would be great, Mmmkay?
+		panic("Unknown dataID in GetData")
+	}
+	dataObj, ok := dataObjects[dataID]
+	if !ok {
+		panic("Unknown dataID in GetData")
+	}
+	return dataObj
 }

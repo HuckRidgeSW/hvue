@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -21,6 +22,7 @@ func main() {
 	go counterEvent()
 	go counterEventWithChannel()
 	go currencyInput()
+	go moreRobustCurrencyInput()
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -297,4 +299,91 @@ func dotPlus3(value string) int {
 	} else {
 		return i + 3
 	}
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+// here’s a more robust currency filter"
+// Still from https://vuejs.org/v2/guide/components.html#Form-Input-Components-using-Custom-Events
+
+type CurrencyInputT struct {
+	*js.Object
+	Price    float64 `js:"price"`
+	Shipping float64 `js:"shipping"`
+	Handling float64 `js:"handling"`
+	Discount float64 `js:"discount"`
+}
+
+func moreRobustCurrencyInput() {
+	data := hvue.NewT(&CurrencyInputT{
+		Price:    0,
+		Shipping: 0,
+		Handling: 0,
+		Discount: 0,
+	}).(*CurrencyInputT)
+
+	hvue.NewComponent("currency-input",
+		hvue.Template(`
+        <div>
+          <label v-if="label">{{ label }}</label>
+          $
+          <input
+            ref="input"
+            v-bind:value="value"
+            v-on:input="UpdateValue($event.target.value)"
+				v-on:focus="SelectAll"
+            v-on:blur="FormatValue"
+          >
+        </div>`),
+		hvue.PropObj(
+			"value",
+			hvue.Types(hvue.PNumber),
+			hvue.Default(0)),
+		hvue.PropObj(
+			"label",
+			hvue.Types(hvue.PString),
+			hvue.Default("")),
+		hvue.Mounted(func(vm *hvue.VM) {
+			vm.Call("FormatValue")
+		}),
+		hvue.MethodsOf(&CurrencyInputT{}),
+		// FIXME: This isn't right.  I guess should inherit its data from parent
+		// vm when not specified (as it's not in the original JS)?
+		hvue.DataFunc(func(*hvue.VM) interface{} {
+			return data
+		}),
+	)
+
+	hvue.NewVM(
+		hvue.El("#app"),
+		hvue.DataS(data),
+		hvue.Computed("total", func(vm *hvue.VM) interface{} {
+			data := vm.GetData().(*CurrencyInputT)
+			return strconv.FormatFloat((data.Price*100+
+				data.Shipping*100+
+				data.Handling*100-
+				data.Discount*100)/100, 'f', 2, 32)
+		}))
+}
+
+func (c *CurrencyInputT) UpdateValue(vm *hvue.VM, value *js.Object) {
+	result := js.Global.Get("currencyValidator").
+		Call("parse", value, vm.Get("value"))
+	if result.Get("warning") != js.Undefined {
+		vm.Refs("input").Set("value", result.Get("value"))
+	}
+	vm.Emit("input", result.Get("value"))
+}
+
+func (c *CurrencyInputT) FormatValue(vm *hvue.VM) {
+	vm.Refs("input").Set("value",
+		js.Global.Get("currencyValidator").Call("format", vm.Get("value")))
+}
+
+func (c *CurrencyInputT) SelectAll(vm *hvue.VM, event *hvue.Event) {
+	// Workaround for Safari bug
+	// http://stackoverflow.com/questions/1269722/selecting-text-on-focus-using-jquery-not-working-in-safari-and-chrome
+	js.Global.Call("setTimeout", func() {
+		event.Get("target").Call("select")
+	})
 }
