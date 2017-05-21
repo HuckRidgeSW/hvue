@@ -5,6 +5,19 @@ import "github.com/gopherjs/gopherjs/js"
 func NewComponent(name string, opts ...option) {
 	c := &Config{Object: o()}
 	c.Option(opts...)
+
+	if c.Data == js.Undefined {
+		c.Object.Set("data", jsCallWithVM(func(vm *VM) interface{} {
+			obj := o()
+			// Get the parent data object ID, if it exists
+			dataID := vm.Get("$parent").Get("$data").Get("hvue_dataID")
+			if dataID != js.Undefined {
+				obj.Set("hvue_dataID", dataID)
+			}
+			return obj
+		}))
+	}
+
 	js.Global.Get("Vue").Call("component", name, c.Object)
 }
 

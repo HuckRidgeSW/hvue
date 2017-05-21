@@ -315,14 +315,8 @@ type CurrencyInputT struct {
 }
 
 func moreRobustCurrencyInput() {
-	data := hvue.NewT(&CurrencyInputT{
-		Price:    0,
-		Shipping: 0,
-		Handling: 0,
-		Discount: 0,
-	}).(*CurrencyInputT)
 
-	hvue.NewComponent("currency-input",
+	hvue.NewComponent("currency-input2",
 		hvue.Template(`
         <div>
           <label v-if="label">{{ label }}</label>
@@ -346,17 +340,16 @@ func moreRobustCurrencyInput() {
 		hvue.Mounted(func(vm *hvue.VM) {
 			vm.Call("FormatValue")
 		}),
-		hvue.MethodsOf(&CurrencyInputT{}),
-		// FIXME: This isn't right.  I guess should inherit its data from parent
-		// vm when not specified (as it's not in the original JS)?
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			return data
-		}),
-	)
+		hvue.MethodsOf(&CurrencyInputT{}))
 
 	hvue.NewVM(
 		hvue.El("#app"),
-		hvue.DataS(data),
+		hvue.DataS(hvue.NewT(&CurrencyInputT{
+			Price:    0,
+			Shipping: 0,
+			Handling: 0,
+			Discount: 0,
+		})),
 		hvue.Computed("total", func(vm *hvue.VM) interface{} {
 			data := vm.GetData().(*CurrencyInputT)
 			return strconv.FormatFloat((data.Price*100+
@@ -381,8 +374,6 @@ func (c *CurrencyInputT) FormatValue(vm *hvue.VM) {
 }
 
 func (c *CurrencyInputT) SelectAll(vm *hvue.VM, event *hvue.Event) {
-	// Workaround for Safari bug
-	// http://stackoverflow.com/questions/1269722/selecting-text-on-focus-using-jquery-not-working-in-safari-and-chrome
 	js.Global.Call("setTimeout", func() {
 		event.Get("target").Call("select")
 	})
