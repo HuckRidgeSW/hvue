@@ -27,7 +27,7 @@ var (
 //
 // If you use a data object (via DataS) and it has a VM field, it's set to
 // this new VM.  TODO: Verify that the VM field is of type *hvue.VM.
-func NewVM(opts ...option) *VM {
+func NewVM(opts ...ComponentOption) *VM {
 	c := &Config{Object: NewObject()}
 	c.Option(opts...)
 	vm := &VM{Object: js.Global.Get("Vue").New(c)}
@@ -40,7 +40,7 @@ func NewVM(opts ...option) *VM {
 }
 
 // El sets the vm's el slot.
-func El(selector string) option {
+func El(selector string) ComponentOption {
 	return func(c *Config) {
 		c.El = selector
 	}
@@ -50,7 +50,7 @@ func El(selector string) option {
 // same vm.
 //
 // FIXME: You can't use MethodsOf with this function.
-func Data(name string, value interface{}) option {
+func Data(name string, value interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Data == js.Undefined {
 			c.Data = NewObject()
@@ -62,7 +62,7 @@ func Data(name string, value interface{}) option {
 // DataS sets the struct `value` as the entire contents of the vm's data
 // field.  `value` should be a pointer to the struct.  If the object has a VM
 // field, NewVM sets it to the new VM object.
-func DataS(value interface{}) option {
+func DataS(value interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Data != js.Undefined {
 			panic("Cannot use hvue.DataS together with any other Data* options")
@@ -86,7 +86,7 @@ func DataS(value interface{}) option {
 // as with MethodsOf.  MethodsOf requires an object when you call NewVM to
 // reguster the VM, long before the VM is actually created or bound; this is
 // called every time a new VM or component is created.
-func DataFunc(f func(*VM) interface{}) option {
+func DataFunc(f func(*VM) interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Data != js.Undefined {
 			panic("Cannot use hvue.DataFunc together with any other Data* options")
@@ -130,7 +130,7 @@ func storeDataID(o *js.Object, value interface{}, c *Config) {
 
 }
 
-func Method(name string, f interface{}) option {
+func Method(name string, f interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
 			c.Methods = NewObject()
@@ -153,7 +153,7 @@ func Method(name string, f interface{}) option {
 // If a method wants a pointer to its vm, use a *VM as the first argument.
 //
 // You can't use MethodsOf with Data(), only with DataS or DataFunc().
-func MethodsOf(t interface{}) option {
+func MethodsOf(t interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
 			c.Methods = NewObject()

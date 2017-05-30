@@ -19,18 +19,18 @@ type Config struct {
 	dataValue reflect.Value
 }
 
-type option func(*Config)
+type ComponentOption func(*Config)
 
 // Option sets the options specified.
-func (c *Config) Option(opts ...option) {
+func (c *Config) Option(opts ...ComponentOption) {
 	for _, opt := range opts {
 		opt(c)
 	}
 }
 
-type pOption func(*propConfig)
+type PropOption func(*PropConfig)
 
-type propConfig struct {
+type PropConfig struct {
 	*js.Object
 	typ       *js.Object  `js:"type"`
 	required  bool        `js:"required"`
@@ -38,7 +38,7 @@ type propConfig struct {
 	validator *js.Object  `js:"validator"`
 }
 
-func (p *propConfig) Option(opts ...pOption) {
+func (p *PropConfig) Option(opts ...PropOption) {
 	for _, opt := range opts {
 		opt(p)
 	}
@@ -55,3 +55,21 @@ const (
 	PArray                = iota
 	// Not sure how to do custom types yet
 )
+
+type DirectiveOption func(*DirectiveConfig)
+
+type DirectiveConfig struct {
+	*js.Object
+	Bind             *js.Object `js:"bind"`
+	Inserted         *js.Object `js:"inserted"`
+	Update           *js.Object `js:"update"`
+	ComponentUpdated *js.Object `js:"componentUpdated"`
+	Unbind           *js.Object `js:"unbind"`
+	Short            *js.Object `js:"short"`
+}
+
+func (c *DirectiveConfig) Option(opts ...DirectiveOption) {
+	for _, opt := range opts {
+		opt(c)
+	}
+}

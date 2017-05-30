@@ -2,7 +2,7 @@ package hvue
 
 import "github.com/gopherjs/gopherjs/js"
 
-func NewComponent(name string, opts ...option) {
+func NewComponent(name string, opts ...ComponentOption) {
 	c := &Config{Object: o()}
 	c.Option(opts...)
 
@@ -21,7 +21,7 @@ func NewComponent(name string, opts ...option) {
 	js.Global.Get("Vue").Call("component", name, c.Object)
 }
 
-func Component(name string, data interface{}) option {
+func Component(name string, data interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Components == js.Undefined {
 			c.Components = o()
@@ -30,7 +30,7 @@ func Component(name string, data interface{}) option {
 	}
 }
 
-func Props(props ...string) option {
+func Props(props ...string) ComponentOption {
 	return func(c *Config) {
 		if c.Props == js.Undefined {
 			c.Props = NewArray()
@@ -41,25 +41,25 @@ func Props(props ...string) option {
 	}
 }
 
-func PropObj(prop string, opts ...pOption) option {
+func PropObj(prop string, opts ...PropOption) ComponentOption {
 	return func(c *Config) {
 		if c.Props == js.Undefined {
 			c.Props = o()
 		}
-		pO := &propConfig{Object: o()}
+		pO := &PropConfig{Object: o()}
 		pO.Option(opts...)
 		c.Props.Set(prop, pO.Object)
 	}
 }
 
-func Template(template string) option {
+func Template(template string) ComponentOption {
 	return func(c *Config) {
 		c.Template = template
 	}
 }
 
-func Types(types ...pOptionType) pOption {
-	return func(p *propConfig) {
+func Types(types ...pOptionType) PropOption {
+	return func(p *PropConfig) {
 		arr := js.Global.Get("Array").New()
 		for _, t := range types {
 			var newVal *js.Object
@@ -83,26 +83,26 @@ func Types(types ...pOptionType) pOption {
 	}
 }
 
-var Required pOption = func(p *propConfig) {
+var Required PropOption = func(p *PropConfig) {
 	p.required = true
 }
 
-func Default(def interface{}) pOption {
-	return func(p *propConfig) {
+func Default(def interface{}) PropOption {
+	return func(p *PropConfig) {
 		p.def = def
 	}
 }
 
-func DefaultFunc(def func(*VM) interface{}) pOption {
-	return func(p *propConfig) {
+func DefaultFunc(def func(*VM) interface{}) PropOption {
+	return func(p *PropConfig) {
 		p.def = jsCallWithVM(def)
 	}
 }
 
 // Validator functions generate warnings in the JS console if using the
 // vue.js development build.
-func Validator(f func(vm *VM, value *js.Object) interface{}) pOption {
-	return func(p *propConfig) {
+func Validator(f func(vm *VM, value *js.Object) interface{}) PropOption {
+	return func(p *PropConfig) {
 		p.validator = js.MakeFunc(
 			func(this *js.Object, args []*js.Object) interface{} {
 				vm := &VM{Object: this}

@@ -6,7 +6,7 @@ import "github.com/gopherjs/gopherjs/js"
 // data for this to work.  It's probably best if it's not even a slot in the
 // struct.  Only access it via vm.Get/Set.  You could create an accessor; see
 // the computed-with-setter example.
-func Computed(name string, f func(vm *VM) interface{}) option {
+func Computed(name string, f func(vm *VM) interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Computed == js.Undefined {
 			c.Computed = NewObject()
@@ -19,7 +19,7 @@ func Computed(name string, f func(vm *VM) interface{}) option {
 // *must not* be set in data for this to work.  It's probably best if it's not
 // even a slot in the struct.  Only access it via vm.Get/Set.  You could
 // create an accessor; see the computed-with-setter example.
-func ComputedWithGetSet(name string, get func(vm *VM) interface{}, set func(vm *VM, newValue *js.Object)) option {
+func ComputedWithGetSet(name string, get func(vm *VM) interface{}, set func(vm *VM, newValue *js.Object)) ComponentOption {
 	return func(c *Config) {
 		if c.Computed == js.Undefined {
 			c.Computed = NewObject()
