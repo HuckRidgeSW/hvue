@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/theclapp/hvue"
+	"github.com/huckridge/hvue"
 )
 
 func main() {

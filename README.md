@@ -1,6 +1,6 @@
 ```
-cd /path/to/github.com/theclapp/hvue
-gopherjs serve github.com/theclapp/hvue
+cd /path/to/github.com/huckridge/hvue
+gopherjs serve github.com/huckridge/hvue
 ```
 and then
 - http://localhost:8080/examples/hello-vue/

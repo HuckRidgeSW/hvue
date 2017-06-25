@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/theclapp/hvue"
+	"github.com/huckridge/hvue"
 )
 
 func main() {

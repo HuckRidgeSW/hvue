@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/theclapp/hvue"
+	"github.com/huckridge/hvue"
 )
 
 var O = func() *js.Object { return js.Global.Get("Object").New() }

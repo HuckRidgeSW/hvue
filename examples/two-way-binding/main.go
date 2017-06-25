@@ -1,6 +1,6 @@
 package main
 
-import "github.com/theclapp/hvue"
+import "github.com/huckridge/hvue"
 
 func main() {
 	hvue.NewVM(
