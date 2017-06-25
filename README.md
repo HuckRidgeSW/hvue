@@ -3,7 +3,7 @@ cd /path/to/github.com/huckridge/hvue
 gopherjs serve github.com/huckridge/hvue
 ```
 and then
-- http://localhost:8080/examples/hello-vue/
-- http://localhost:8080/examples/bind-element-attributes/
+- http://localhost:8080/examples/01-introduction/
+- http://localhost:8080/examples/02-lifecycle/
 - and so on
 
