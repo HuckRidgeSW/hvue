@@ -8,6 +8,7 @@ import (
 
 var o = func() *js.Object { return js.Global.Get("Object").New() }
 
+// VM wraps a js Vue object.
 type VM struct {
 	*js.Object
 	Data *js.Object `js:"$data"`
@@ -130,6 +131,7 @@ func storeDataID(o *js.Object, value interface{}, c *Config) {
 
 }
 
+// Method adds a single function as a method on a vm.
 func Method(name string, f interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
@@ -257,15 +259,22 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 		})
 }
 
+// Emit emits an event.  It wraps js{vm.$emit}:
+// https://vuejs.org/v2/api/#vm-emit.
 func (vm *VM) Emit(event string, args ...interface{}) {
 	args = append([]interface{}{event}, args...)
 	vm.Call("$emit", args...)
 }
 
+// Refs returns the ref for name.  vm.Refs("foo") compiles to
+// js{vm.$refs.foo}.  It wraps vm.$refs: https://vuejs.org/v2/api/#vm-refs.
 func (vm *VM) Refs(name string) *js.Object {
 	return vm.Get("$refs").Get(name)
 }
 
+// GetData returns the Go data object associated with a *VM.  You need to type
+// assert its return value to data type you passed to DataS(), or returned
+// from the function given to DataFunc().
 func (vm *VM) GetData() interface{} {
 	dataID := vm.Data.Get("hvue_dataID").Int()
 	if dataID == 0 {

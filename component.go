@@ -2,6 +2,8 @@ package hvue
 
 import "github.com/gopherjs/gopherjs/js"
 
+// NewComponent defines a new Vue component.  It wraps js{Vue.component}:
+// https://vuejs.org/v2/api/#Vue-component.
 func NewComponent(name string, opts ...ComponentOption) {
 	c := &Config{Object: o()}
 	c.Option(opts...)
@@ -21,6 +23,9 @@ func NewComponent(name string, opts ...ComponentOption) {
 	js.Global.Get("Vue").Call("component", name, c.Object)
 }
 
+// Component is used in NewVM to define a local component, within the scope of
+// another instance/component.
+// https://vuejs.org/v2/guide/components.html#Local-Registration
 func Component(name string, data interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Components == js.Undefined {
@@ -30,6 +35,8 @@ func Component(name string, data interface{}) ComponentOption {
 	}
 }
 
+// Props defines one or more simple prop slots.  For complex prop slots, use
+// PropObj().  https://vuejs.org/v2/api/#props
 func Props(props ...string) ComponentOption {
 	return func(c *Config) {
 		if c.Props == js.Undefined {
@@ -41,23 +48,29 @@ func Props(props ...string) ComponentOption {
 	}
 }
 
-func PropObj(prop string, opts ...PropOption) ComponentOption {
+// PropObj defines a complex prop slot called `name`, configured with Types,
+// Default, DefaultFunc, and Validator.
+func PropObj(name string, opts ...PropOption) ComponentOption {
 	return func(c *Config) {
 		if c.Props == js.Undefined {
 			c.Props = o()
 		}
 		pO := &PropConfig{Object: o()}
 		pO.Option(opts...)
-		c.Props.Set(prop, pO.Object)
+		c.Props.Set(name, pO.Object)
 	}
 }
 
+// Template defines a template for a component.  It sets the js{template} slot
+// of a js{Vue.component}'s configuration object.
 func Template(template string) ComponentOption {
 	return func(c *Config) {
 		c.Template = template
 	}
 }
 
+// Types configures the allowed types for a prop.
+// https://vuejs.org/v2/guide/components.html#Props.
 func Types(types ...pOptionType) PropOption {
 	return func(p *PropConfig) {
 		arr := js.Global.Get("Array").New()
@@ -83,16 +96,22 @@ func Types(types ...pOptionType) PropOption {
 	}
 }
 
+// Required specifies that the prop is required.
+// https://vuejs.org/v2/guide/components.html#Props.
 var Required PropOption = func(p *PropConfig) {
 	p.required = true
 }
 
+// Default gives the default for a prop.
+// https://vuejs.org/v2/guide/components.html#Props
 func Default(def interface{}) PropOption {
 	return func(p *PropConfig) {
 		p.def = def
 	}
 }
 
+// DefaultFunc sets a function that returns the default for a prop.
+// https://vuejs.org/v2/guide/components.html#Props
 func DefaultFunc(def func(*VM) interface{}) PropOption {
 	return func(p *PropConfig) {
 		p.def = jsCallWithVM(def)
@@ -100,7 +119,8 @@ func DefaultFunc(def func(*VM) interface{}) PropOption {
 }
 
 // Validator functions generate warnings in the JS console if using the
-// vue.js development build.
+// vue.js development build.  They don't panic or otherwise crash your code,
+// they just give warnings if the validation fails.
 func Validator(f func(vm *VM, value *js.Object) interface{}) PropOption {
 	return func(p *PropConfig) {
 		p.validator = js.MakeFunc(
