@@ -33,9 +33,8 @@ func NewDirective(name string, opts ...DirectiveOption) *Directive {
 	c.Option(opts...)
 	if c.Short != js.Undefined {
 		return &Directive{Object: js.Global.Get("Vue").Call("directive", name, c.Short)}
-	} else {
-		return &Directive{Object: js.Global.Get("Vue").Call("directive", name, c.Object)}
 	}
+	return &Directive{Object: js.Global.Get("Vue").Call("directive", name, c.Object)}
 }
 
 // Bind specifies the js{bind} directive hook function.  Called only once,
@@ -112,7 +111,7 @@ func Short(f func(el *js.Object, binding *DirectiveBinding, vnode, oldVnode *js.
 	return func(c *DirectiveConfig) {
 		c.Short = js.MakeFunc(
 			func(thisNotSet *js.Object, jsArgs []*js.Object) interface{} {
-				var lastArg *js.Object = nil
+				var lastArg *js.Object
 				switch len(jsArgs) {
 				case 3:
 					// Do nothing

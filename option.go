@@ -6,6 +6,7 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+// Config is the config object for NewVM.
 type Config struct {
 	*js.Object
 	El         string     `js:"el"`
@@ -30,6 +31,7 @@ func (c *Config) Option(opts ...ComponentOption) {
 
 type PropOption func(*PropConfig)
 
+// PropConfig is the config object for Props
 type PropConfig struct {
 	*js.Object
 	typ       *js.Object  `js:"type"`
@@ -58,6 +60,7 @@ const (
 
 type DirectiveOption func(*DirectiveConfig)
 
+// DirectiveConfig is the config object for configuring a directive.
 type DirectiveConfig struct {
 	*js.Object
 	Bind             *js.Object `js:"bind"`
