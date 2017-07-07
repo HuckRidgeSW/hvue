@@ -106,6 +106,7 @@ func binding_styles() {
 	}{Object: hvue.NewObject()}
 	data4.StyleObject = &StyleObject{Object: hvue.NewObject()}
 	// As of this writing, you can't assign data4.Color or FontSize directly.
+	// See https://github.com/gopherjs/gopherjs/issues/640.
 	data4.StyleObject.Color = "red"
 	data4.StyleObject.FontSize = "13px"
 
