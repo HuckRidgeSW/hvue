@@ -10,7 +10,22 @@ import (
 // Several examples in one, from
 // https://vuejs.org/v2/guide/class-and-style.html.
 
+type ClassObject struct {
+	*js.Object
+	Active     bool `js:"active"`
+	TextDanger bool `js:"text_danger"`
+}
+
 func main() {
+	go dynamically_toggle_classes()
+	go doesnt_have_to_be_inline()
+	go bind_to_a_computed_property()
+	go binding_styles()
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+func dynamically_toggle_classes() {
 	// "We can pass an object to v-bind:class to dynamically toggle classes"
 	data1 := &struct {
 		*js.Object
@@ -27,13 +42,12 @@ func main() {
 		data1.IsActive = true
 		println("isActive:", data1.IsActive)
 	}()
+}
 
+////////////////////////////////////////////////////////////////////////////////
+
+func doesnt_have_to_be_inline() {
 	// "The bound object doesn’t have to be inline"
-	type ClassObject struct {
-		*js.Object
-		Active     bool `js:"active"`
-		TextDanger bool `js:"text_danger"`
-	}
 	data2 := &struct {
 		*js.Object
 		*ClassObject `js:"classObject"`
@@ -45,7 +59,11 @@ func main() {
 	hvue.NewVM(
 		hvue.El("#object-syntax-2"),
 		hvue.DataS(data2))
+}
 
+////////////////////////////////////////////////////////////////////////////////
+
+func bind_to_a_computed_property() {
 	// "We can also bind to a computed property that returns an object"
 	type errorType struct {
 		*js.Object
@@ -71,7 +89,11 @@ func main() {
 					data3.Error.Type == "fatal"
 				return co
 			}))
+}
 
+////////////////////////////////////////////////////////////////////////////////
+
+func binding_styles() {
 	// Binding styles
 	type StyleObject struct {
 		*js.Object
@@ -84,6 +106,7 @@ func main() {
 	}{Object: hvue.NewObject()}
 	data4.StyleObject = &StyleObject{Object: hvue.NewObject()}
 	// As of this writing, you can't assign data4.Color or FontSize directly.
+	// See https://github.com/gopherjs/gopherjs/issues/640.
 	data4.StyleObject.Color = "red"
 	data4.StyleObject.FontSize = "13px"
 

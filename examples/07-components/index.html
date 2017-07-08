@@ -1,13 +1,13 @@
 <html>
 <body>
 	<div id="example">
-	  <my-component></my-component>
+		<my-component></my-component>
 	</div>
 
 	<hr>
 
 	<div id="example-a">
-	  <my-local-component></my-local-component>
+		<my-local-component></my-local-component>
 	</div>
 
 	<hr>
@@ -42,32 +42,32 @@
 
 	<div id="example-4">
 		<!--
-	  Note camelCase in the Go: "propA" and so on.
-	  prop-a is :prop-a (shorthand for v-bind:prop-a), so the 10 is evaluated.
-	  prop-b is not, so it's just a string.  If you say :prop-b, foo is assumed
-	  to be a method on the vm and called as a function.
-	  Change prop-f to 9 to make it fail validation.  See the JS console for
-	  the warning.
+		Note camelCase in the Go: "propA" and so on.
+		prop-a is :prop-a (shorthand for v-bind:prop-a), so the 10 is evaluated.
+		prop-b is not, so it's just a string.  If you say :prop-b, foo is assumed
+		to be a method on the vm and called as a function.
+		Change prop-f to 9 to make it fail validation.  See the JS console for
+		the warning.
 		-->
 		<child2 :prop-a="10" prop-b="foo" prop-c="bar"
-				  :prop-f="11"
-		></child2>
+			:prop-f="11"
+			></child2>
 	</div>
 
 	<hr>
 
 	<div id="counter-event-example">
-	  <p>{{ total }}</p>
-	  <button-counter v-on:increment="IncrementTotal"></button-counter>
-	  <button-counter v-on:increment="IncrementTotal"></button-counter>
+		<p>{{ total }}</p>
+		<button-counter v-on:increment="IncrementTotal"></button-counter>
+		<button-counter v-on:increment="IncrementTotal"></button-counter>
 	</div>
 
 	<hr>
 
 	<div id="counter-event-example-with-channel">
-	  <p>{{ total }}</p>
-	  <button-counter-with-channel></button-counter-with-channel>
-	  <button-counter-with-channel></button-counter-with-channel>
+		<p>{{ total }}</p>
+		<button-counter-with-channel></button-counter-with-channel>
+		<button-counter-with-channel></button-counter-with-channel>
 	</div>
 
 	<hr>
@@ -83,24 +83,23 @@
 	<script src="https://cdn.rawgit.com/chrisvfritz/5f0a639590d6e648933416f90ba7ae4e/raw/98739fb8ac6779cb2da11aaa9ab6032e52f3be00/currency-validator.js"></script>
 
 	<div id="app">
-	  <currency-input2
-		 label="Price" 
-		 v-model="price"
-	  ></currency-input2>
-	  <currency-input2 
-		 label="Shipping" 
-		 v-model="shipping"
-	  ></currency-input2>
-	  <currency-input2 
-		 label="Handling" 
-		 v-model="handling"
-	  ></currency-input2>
-	  <currency-input2 
-		 label="Discount" 
-		 v-model="discount"
-	  ></currency-input2>
-	  
-	  <p>Total: ${{ total }}</p>
+		<currency-input2
+			label="Price"
+			v-model="price"
+			></currency-input2>
+		<currency-input2
+			label="Shipping"
+			v-model="shipping"
+			></currency-input2>
+		<currency-input2
+			label="Handling"
+			v-model="handling"
+		></currency-input2>
+		<currency-input2
+			label="Discount"
+			v-model="discount"
+			></currency-input2>
+		<p>Total: ${{ total }}</p>
 	</div>
 
 </body>
