@@ -45,14 +45,17 @@ func BeforeUpdate(f func(vm *VM)) ComponentOption { return makeLifecycleMethod("
 // https://vuejs.org/v2/api/#updated
 func Updated(f func(vm *VM)) ComponentOption { return makeLifecycleMethod("updated", f) }
 
-// Activated lets you define a hook for the activated lifecycle action.
+// Activated lets you define a hook for the activated lifecycle action.  Only
+// runs in Vue-defined components (e.g. not regular DIVs) inside a <keep-alive>.
 // "Called when a kept-alive component is activated."
-// https://vuejs.org/v2/api/#activated
+// https://vuejs.org/v2/api/#activated and https://vuejs.org/v2/api/#keep-alive
 func Activated(f func(vm *VM)) ComponentOption { return makeLifecycleMethod("activated", f) }
 
 // Deactivated lets you define a hook for the deactivated lifecycle action.
+// Only runs in Vue-defined components (e.g. not regular DIVs) inside a
+// <keep-alive>.
 // "Called when a kept-alive component is deactivated."
-// https://vuejs.org/v2/api/#deactivated
+// https://vuejs.org/v2/api/#deactivated and https://vuejs.org/v2/api/#keep-alive
 func Deactivated(f func(vm *VM)) ComponentOption { return makeLifecycleMethod("deactivated", f) }
 
 // BeforeDestroy lets you define a hook for the beforeDestroy lifecycle

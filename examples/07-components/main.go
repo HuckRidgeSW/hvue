@@ -37,17 +37,10 @@ func aRegularComponent() {
 /////////////////////////////////////////////////////////////////////////
 
 func localRegistration() {
-	// Local registration
-	type ChildT struct {
-		*js.Object
-		Template string `js:"template"`
-	}
-	var Child = hvue.NewT(
-		&ChildT{Template: `<div>A custom component, example 2!</div>`},
-	)
 	hvue.NewVM(
 		hvue.El("#example-a"),
-		hvue.Component("my-component", Child))
+		hvue.Component("my-local-component",
+			hvue.Template(`<div>A custom component, example 2!</div>`)))
 }
 
 /////////////////////////////////////////////////////////////////////////

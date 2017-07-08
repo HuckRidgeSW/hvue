@@ -26,12 +26,16 @@ func NewComponent(name string, opts ...ComponentOption) {
 // Component is used in NewVM to define a local component, within the scope of
 // another instance/component.
 // https://vuejs.org/v2/guide/components.html#Local-Registration
-func Component(name string, data interface{}) ComponentOption {
+func Component(name string, opts ...ComponentOption) ComponentOption {
 	return func(c *Config) {
+		componentOption := &Config{Object: o()}
+		componentOption.Option(opts...)
+
 		if c.Components == js.Undefined {
 			c.Components = o()
 		}
-		c.Components.Set(name, data)
+
+		c.Components.Set(name, componentOption.Object)
 	}
 }
 

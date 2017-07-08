@@ -1,7 +1,16 @@
 <html>
 <body>
 	<div id="app">
-	   {{ message }}
+		{{ message }}
+
+		<!--
+		Demo the activated & deactivated lifecycle events, which only work on
+		custom Vue components inside a <keep-alive>.
+		-->
+		<keep-alive>
+			<show1 v-if="show === 1"></show1>
+			<show2 v-if="show === 2"></show2>
+		</keep-alive>
 	</div>
 	<div>
 		<hr>
