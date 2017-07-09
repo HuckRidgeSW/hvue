@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/huckridge/hvue"
+	"github.com/huckridgesw/hvue"
 )
 
 type Data struct {

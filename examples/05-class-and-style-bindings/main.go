@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/huckridge/hvue"
+	"github.com/huckridgesw/hvue"
 )
 
 // Several examples in one, from

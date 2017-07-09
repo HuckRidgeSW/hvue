@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/huckridge/hvue"
+	"github.com/huckridgesw/hvue"
 )
 
 var O = func() *js.Object { return js.Global.Get("Object").New() }
