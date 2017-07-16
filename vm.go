@@ -11,7 +11,18 @@ var o = func() *js.Object { return js.Global.Get("Object").New() }
 // VM wraps a js Vue object.
 type VM struct {
 	*js.Object
-	Data *js.Object `js:"$data"`
+	Data  *js.Object `js:"$data"`
+	Props *js.Object `js:"$props"`
+	El    *js.Object `js:"$el"`
+
+	// Several of these should probably be functions, like Refs already is.
+	Options     *js.Object   `js:"$options"`
+	Parent      *js.Object   `js:"$parent"`
+	Root        *js.Object   `js:"$root"`
+	Children    []*js.Object `js:"$children"`
+	Slots       *js.Object   `js:"$slots"`
+	ScopedSlots *js.Object   `js:"$scopedSlots"`
+	IsServer    bool         `js:"$isServer"`
 }
 
 var (
@@ -257,6 +268,21 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 			}
 			return nil
 		})
+}
+
+// untested
+func Filter(name string, f func(vm *VM, value *js.Object, args ...*js.Object) interface{}) ComponentOption {
+	return func(c *Config) {
+		if c.Filters == js.Undefined {
+			c.Filters = o()
+		}
+
+		c.Filters.Set(name, js.MakeFunc(
+			func(this *js.Object, args []*js.Object) interface{} {
+				vm := &VM{Object: this}
+				return f(vm, args[0], args[1:]...)
+			}))
+	}
 }
 
 // Emit emits an event.  It wraps js{vm.$emit}:

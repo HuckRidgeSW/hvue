@@ -250,7 +250,9 @@ func currencyInput() {
 
 		// Show two ways of adding the UpdateValue method:
 
-		// #1: Automatically add all methods of *CurrencyData:
+		// #1: Automatically add all methods of *CurrencyData.  NOTE: that
+		// UpdateValue is not actually a method of CurrencyData, this is just an
+		// example call of hvue.MethodsOf.
 		// hvue.MethodsOf(&CurrencyData{}),
 
 		// #2: Add this closure as a single named method:

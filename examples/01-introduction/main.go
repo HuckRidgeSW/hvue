@@ -9,18 +9,18 @@ import (
 )
 
 func main() {
-	go hello_vue()
-	go bind_element_attributes()
-	go toggle_presence_of_element()
-	go display_a_list()
-	go press_a_button()
-	go two_way_binding()
-	go composing_with_components()
+	go helloVue()
+	go bindElementAttributes()
+	go togglePresenceOfElement()
+	go displayAList()
+	go pressAButton()
+	go twoWayBinding()
+	go composingWithComponents()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func hello_vue() {
+func helloVue() {
 	app := hvue.NewVM(
 		hvue.El("#app"),
 		hvue.Data("message", "Hello, Vue!"))
@@ -30,7 +30,7 @@ func hello_vue() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func bind_element_attributes() {
+func bindElementAttributes() {
 	app2 := hvue.NewVM(
 		hvue.El("#app-2"),
 		hvue.Data("message", "You loaded this page on "+time.Now().String()))
@@ -40,7 +40,7 @@ func bind_element_attributes() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func toggle_presence_of_element() {
+func togglePresenceOfElement() {
 	app3 := hvue.NewVM(
 		hvue.El("#app-3"),
 		hvue.Data("seen", true))
@@ -50,7 +50,7 @@ func toggle_presence_of_element() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func display_a_list() {
+func displayAList() {
 	app4 := hvue.NewVM(
 		hvue.El("#app-4"),
 		hvue.Data("todos", []struct{ Text string }{
@@ -68,7 +68,7 @@ type Data5 struct {
 	Message string `js:"message"`
 }
 
-func press_a_button() {
+func pressAButton() {
 	hvue.NewVM(
 		hvue.El("#app-5"),
 		hvue.DataS(hvue.NewT(&Data5{Message: "Hello, Vue!"})),
@@ -89,7 +89,7 @@ func reverse(s string) string {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func two_way_binding() {
+func twoWayBinding() {
 	hvue.NewVM(
 		hvue.El("#app-6"),
 		hvue.Data("message", "Hello Vue!"))
@@ -107,7 +107,7 @@ type ListItem7 struct {
 	Text string `js:"text"`
 }
 
-func composing_with_components() {
+func composingWithComponents() {
 	hvue.NewComponent("todo-item",
 		hvue.Props("todo"),
 		hvue.Template("<li>{{ todo.text }}</li>"))
