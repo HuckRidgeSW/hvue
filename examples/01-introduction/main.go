@@ -1,5 +1,8 @@
 package main
 
+// This file has code from the Vue Guide Introduction page.
+// https://github.com/HuckRidgeSW/hvue/tree/master/examples/01-introduction.
+
 import (
 	"strings"
 	"time"

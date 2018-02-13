@@ -1,5 +1,7 @@
 package main
 
+// From https://vuejs.org/v2/guide/computed.html#Basic-Example
+
 import (
 	"strings"
 

@@ -1,5 +1,8 @@
 package main
 
+// From https://vuejs.org/v2/guide/computed.html#Computed-vs-Watched-Property
+// and https://vuejs.org/v2/guide/computed.html#Computed-Setter.
+
 import (
 	"strings"
 	"time"
