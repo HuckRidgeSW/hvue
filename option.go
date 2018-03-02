@@ -19,6 +19,8 @@ type Config struct {
 	Filters    *js.Object `js:"filters"`
 
 	dataValue reflect.Value
+
+	Setters *js.Object `js:"hvue_setters"`
 }
 
 type ComponentOption func(*Config)

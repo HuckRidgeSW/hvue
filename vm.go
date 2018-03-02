@@ -23,6 +23,10 @@ type VM struct {
 	Slots       *js.Object   `js:"$slots"`
 	ScopedSlots *js.Object   `js:"$scopedSlots"`
 	IsServer    bool         `js:"$isServer"`
+
+	// Note existence of fields with setter methods, which won't show up in
+	// $data.
+	Setters *js.Object `js:"hvue_setters"`
 }
 
 var (
@@ -41,6 +45,7 @@ var (
 // this new VM.  TODO: Verify that the VM field is of type *hvue.VM.
 func NewVM(opts ...ComponentOption) *VM {
 	c := &Config{Object: NewObject()}
+	c.Setters = NewObject()
 	c.Option(opts...)
 	vm := &VM{Object: js.Global.Get("Vue").New(c)}
 	if c.dataValue.IsValid() {
@@ -48,6 +53,7 @@ func NewVM(opts ...ComponentOption) *VM {
 			vmField.Set(reflect.ValueOf(vm))
 		}
 	}
+	vm.Setters = c.Setters
 	return vm
 }
 
@@ -142,7 +148,8 @@ func storeDataID(o *js.Object, value interface{}, c *Config) {
 
 }
 
-// Method adds a single function as a method on a vm.
+// Method adds a single function as a "method" on a vm.  It does not change
+// the method set of the data object, if any.
 func Method(name string, f interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Methods == js.Undefined {
@@ -318,7 +325,8 @@ func (vm *VM) GetData() interface{} {
 // the VM's data object, and panics otherwise.  (If you don't want this check,
 // then use vm.Object.Set() directly.)
 func (vm *VM) Set(key string, value interface{}) {
-	if vm.Object.Get("$data").Get(key) == js.Undefined {
+	if vm.Object.Get("$data").Get(key) == js.Undefined &&
+		vm.Setters.Get(key) == js.Undefined {
 		panic("Unknown data slot set: " + key)
 	}
 	vm.Object.Set(key, value)

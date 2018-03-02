@@ -34,5 +34,6 @@ func ComputedWithGetSet(name string, get func(vm *VM) interface{}, set func(vm *
 						set(vm, args[0])
 						return nil
 					})})
+		c.Setters.Set(name, true)
 	}
 }
