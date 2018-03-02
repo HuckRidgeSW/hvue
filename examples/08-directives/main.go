@@ -1,5 +1,8 @@
 package main
 
+// From https://vuejs.org/v2/guide/custom-directive.html.  More direct links
+// below.
+
 import (
 	"fmt"
 	"strings"

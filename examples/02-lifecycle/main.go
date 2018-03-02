@@ -1,5 +1,11 @@
 package main
 
+// This file demos Vue lifecycle hooks
+// (https://vuejs.org/v2/guide/instance.html#Instance-Lifecycle-Hooks) but does
+// not correspond to any specific example on that page.
+//
+// See https://vuejs.org/v2/api/#Options-Lifecycle-Hooks for docs on all hooks.
+
 import (
 	"time"
 

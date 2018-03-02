@@ -1,14 +1,14 @@
 package main
 
+// Several examples in one, from
+// https://vuejs.org/v2/guide/class-and-style.html.
+
 import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/huckridgesw/hvue"
 )
-
-// Several examples in one, from
-// https://vuejs.org/v2/guide/class-and-style.html.
 
 type ClassObject struct {
 	*js.Object
