@@ -6,6 +6,7 @@ import "github.com/gopherjs/gopherjs/js"
 // https://vuejs.org/v2/api/#Vue-component.
 func NewComponent(name string, opts ...ComponentOption) {
 	c := &Config{Object: o()}
+	c.Setters = o()
 	c.Option(opts...)
 
 	if c.Data == js.Undefined {
