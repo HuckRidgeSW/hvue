@@ -4,7 +4,7 @@ import "github.com/gopherjs/gopherjs/js"
 
 // Computed defines name as a computed property.  Note that name *must not* be
 // set in data for this to work.  It's probably best if it's not even a slot
-// in the struct.  Only access it via vm.Get/Set.  You could create an
+// in the struct.  Only access it via vm.Get.  You could also create an
 // accessor; see the 04-computed-with-setter example.
 func Computed(name string, f func(vm *VM) interface{}) ComponentOption {
 	return func(c *Config) {

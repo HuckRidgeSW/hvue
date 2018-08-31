@@ -321,9 +321,10 @@ func (vm *VM) GetData() interface{} {
 	return dataObj
 }
 
-// Set wraps (*js.Object).Set(), but checks to make sure it's a valid slot in
-// the VM's data object, and panics otherwise.  (If you don't want this check,
-// then use vm.Object.Set() directly.)
+// Set wraps vm.Object.Set(), but checks to make sure the given field is a
+// valid slot in the VM's data object (including computed setters), and panics
+// otherwise.  (If you don't want this check, then use vm.Object.Set()
+// directly.)
 func (vm *VM) Set(key string, value interface{}) {
 	if vm.Object.Get("$data").Get(key) == js.Undefined &&
 		vm.Setters.Get(key) == js.Undefined {
