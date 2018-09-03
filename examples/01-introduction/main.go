@@ -123,9 +123,10 @@ func composingWithComponents() {
 		"Cheese",
 		"Whatever else humans are supposed to eat")
 
-	hvue.NewVM(
+	app7 := hvue.NewVM(
 		hvue.El("#app-7"),
 		hvue.DataS(d7, d7.Value))
+	js.Global().Set("app7", app7.Value)
 }
 
 func NewData7(texts ...string) *Data7 {
