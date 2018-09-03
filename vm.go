@@ -4,28 +4,11 @@ import (
 	"reflect"
 
 	"github.com/gopherjs/gopherwasm/js"
-	// "github.com/gopherjs/gopherjs/js"
 )
 
 // VM wraps a js Vue object.
 type VM struct {
 	js.Value
-	// Data  js.Value `js:"$data"`
-	// Props js.Value `js:"$props"`
-	// El    js.Value `js:"$el"`
-
-	// Several of these should probably be functions, like Refs already is.
-	// Options     js.Value   `js:"$options"`
-	// Parent      js.Value   `js:"$parent"`
-	// Root        js.Value   `js:"$root"`
-	// Children    []js.Value `js:"$children"`
-	// Slots       js.Value   `js:"$slots"`
-	// ScopedSlots js.Value   `js:"$scopedSlots"`
-	// IsServer    bool       `js:"$isServer"`
-
-	// Note existence of fields with setter methods, which won't show up in
-	// $data.
-	// Setters js.Value `js:"hvue_setters"`
 }
 
 func (vm *VM) Data() js.Value    { return vm.Get("$data") }
@@ -39,7 +22,9 @@ func (vm *VM) Root() js.Value    { return vm.Get("$root") }
 func (vm *VM) Slots() js.Value       { return vm.Get("$slots") }
 func (vm *VM) ScopedSlots() js.Value { return vm.Get("$scopedSlots") }
 func (vm *VM) IsServer() bool        { return vm.Get("$isServer").Bool() }
-func (vm *VM) Setters() js.Value     { return vm.Get("hvue_setters") }
+
+// Note existence of fields with setter methods, which won't show up in $data.
+func (vm *VM) Setters() js.Value { return vm.Get("hvue_setters") }
 
 func (vm *VM) SetSetters(new js.Value) { vm.Value.Set("hvue_setters", new) }
 

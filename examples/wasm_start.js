@@ -27,12 +27,15 @@ if (hvue_wasm) {
 		});
 	}
 
-	wasm_callback = function(f) {
+	wasm_call_with_this = function(f) {
 		return function() {
 			f(this, ...arguments);
 		}
 	}
+
 } else {
+	// UNTESTED
+
 	wasm_start = async function(file) {
 		// OMG FIXME
 		response = await fetch("/examples/"+file+"/"+file+".js")
@@ -44,7 +47,22 @@ if (hvue_wasm) {
 		}
 	}
 
-	wasm_callback = function(id, f) {
+	wasm_call_with_this = function(f) {
 		return f;
 	}
 }
+
+function wasm_return_thing(thing) {
+	return function() {
+		return thing
+	}
+}
+
+function wasm_new_data_func(templateObj, f) {
+	return function() {
+		newO = Object.assign({}, templateObj)
+		f(newO) // runs later
+		return newO
+	}
+}
+

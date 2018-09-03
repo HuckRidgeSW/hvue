@@ -2,7 +2,6 @@ package hvue
 
 import (
 	"github.com/gopherjs/gopherwasm/js"
-	// "github.com/gopherjs/gopherjs/js"
 )
 
 // Directive wraps a js{Vue.directive} object.
@@ -15,12 +14,6 @@ type Directive struct {
 // https://vuejs.org/v2/guide/custom-directive.html#Directive-Hook-Arguments
 type DirectiveBinding struct {
 	Value_ js.Value
-	// Name       string      `js:"name"`
-	// Value      interface{} `js:"value"`
-	// OldValue   interface{} `js:"oldValue"`
-	// Expression string      `js:"expression"`
-	// Arg        string      `js:"arg"`
-	// Modifiers  js.Value    `js:"modifiers"`
 }
 
 func (db *DirectiveBinding) Name() string        { return db.Value_.Get("name").String() }

@@ -2,7 +2,6 @@ package hvue
 
 import (
 	"github.com/gopherjs/gopherwasm/js"
-	// "github.com/gopherjs/gopherjs/js"
 )
 
 // NewComponent defines a new Vue component.  It wraps js{Vue.component}:
@@ -12,16 +11,23 @@ func NewComponent(name string, opts ...ComponentOption) {
 	c.SetSetters(NewObject())
 	c.Option(opts...)
 
-	if c.Data() == js.Undefined() {
-		c.SetData(jsCallWithVM(func(vm *VM) interface{} {
-			obj := NewObject()
-			// Get the parent data object ID, if it exists
-			dataID := vm.Get("$parent").Get("$data").Get("hvue_dataID")
-			if dataID != js.Undefined() {
-				obj.Set("hvue_dataID", dataID)
-			}
-			return obj
-		}))
+	dataType := c.Get("hvue_data_type")
+	if dataType != js.Undefined() && js.Type(dataType.Int()) != js.TypeFunction {
+		panic("Cannot use Data() with NewComponent, must use DataFunc.  Component: " + name)
+	}
+
+	if c.DataFunc() == js.Undefined() {
+		c.SetDataFunc(func(js.Value) {})
+
+		// c.SetData(jsCallWithVM(func(vm *VM) interface{} {
+		// 	obj := NewObject()
+		// 	// Get the parent data object ID, if it exists
+		// 	dataID := vm.Get("$parent").Get("$data").Get("hvue_dataID")
+		// 	if dataID != js.Undefined() {
+		// 		obj.Set("hvue_dataID", dataID)
+		// 	}
+		// 	return obj
+		// }))
 	}
 
 	js.Global().Get("Vue").Call("component", name, c.Value)

@@ -2,7 +2,6 @@ package hvue
 
 import (
 	"github.com/gopherjs/gopherwasm/js"
-	// "github.com/gopherjs/gopherjs/js"
 )
 
 // Computed defines name as a computed property.  Note that name *must not* be
