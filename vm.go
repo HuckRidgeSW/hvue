@@ -104,21 +104,28 @@ func DataFunc(f func(*VM) interface{}) ComponentOption {
 			panic("Cannot use hvue.DataFunc together with any other Data* options")
 		}
 		// See comment about c.Data in DataS().
-		c.SetData(jsCallWithVM(func(vm *VM) interface{} {
-			// Get the new data object
-			value := f(vm)
+		//
+		// FIXME: This is pretty wrong right now.  f needs to take a js.Value
+		// and initialize the fields in it.  Also, the JS data function thunk
+		//     arranges for the vm to be in the dataObj.hvue_vm
+		panic("this is wrong")
 
-			// Find the js.Value in field 0, however deep.
-			// FIXME: If the types are wrong at any point (not pointer to a
-			// struct at each level), then this'll fail with a
-			// probably-not-very-clear error message.
-			i := reflect.ValueOf(value).Elem().Field(0)
-			for i.Type() != jsOType {
-				i = i.Elem().Field(0)
-			}
-			storeDataID(i.Interface().(js.Value), value, c)
-			return value
-		}))
+		// c.SetDataFunc(jsCallWithVM(func(vm *VM) interface{} {
+
+		// 	// Get the new data object
+		// 	value := f(vm)
+
+		// 	// Find the js.Value in field 0, however deep.
+		// 	// FIXME: If the types are wrong at any point (not pointer to a
+		// 	// struct at each level), then this'll fail with a
+		// 	// probably-not-very-clear error message.
+		// 	i := reflect.ValueOf(value).Elem().Field(0)
+		// 	for i.Type() != jsOType {
+		// 		i = i.Elem().Field(0)
+		// 	}
+		// 	storeDataID(i.Interface().(js.Value), value, c)
+		// 	return value
+		// }))
 	}
 }
 

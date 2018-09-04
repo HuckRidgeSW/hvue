@@ -1,4 +1,7 @@
-var wasm_start, wasm_callback, go;
+var wasm_start;
+var go;
+
+console.log("hvue_wasm:", hvue_wasm)
 
 if (hvue_wasm) {
 	if (!WebAssembly.instantiateStreaming) { // polyfill
@@ -27,15 +30,7 @@ if (hvue_wasm) {
 		});
 	}
 
-	wasm_call_with_this = function(f) {
-		return function() {
-			f(this, ...arguments);
-		}
-	}
-
 } else {
-	// UNTESTED
-
 	wasm_start = async function(file) {
 		// OMG FIXME
 		response = await fetch("/examples/"+file+"/"+file+".js")
@@ -46,23 +41,34 @@ if (hvue_wasm) {
 			throw new Error('Network response was not ok.');
 		}
 	}
-
-	wasm_call_with_this = function(f) {
-		return f;
-	}
 }
 
-function wasm_return_thing(thing) {
+function wasm_call_with_this(f) {
 	return function() {
-		return thing
+		f(this, ...arguments);
 	}
 }
 
 function wasm_new_data_func(templateObj, f) {
 	return function() {
-		newO = Object.assign({}, templateObj)
-		f(newO) // runs later
-		return newO
+		var newO;
+
+		// Create a new object, based on the template
+		newO = Object.assign({}, templateObj);
+		// newO.hvue_vm = this;
+
+		// Not sure I need this?
+		if (newO.hvue_dataID === undefined) {
+			var dataID = this.$parent.$data.hvue_dataID;
+			if (dataID !== undefined) {
+				newO.hvue_dataID = dataID
+			}
+		}
+
+		// Call the hvue function to initialize these fields
+		f(this, newO); // wasm: runs later; GopherJS: runs now
+
+		return newO;
 	}
 }
 

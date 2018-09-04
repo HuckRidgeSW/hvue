@@ -12,7 +12,9 @@ type Config struct {
 	// dataValue reflect.Value
 }
 
-type DataFuncT func(o js.Value)
+// The type of function passed to SetDataFunc, to initialize the fields for a
+// new data object in a Vue component.
+type DataFuncT func(vm js.Value, dataObj js.Value)
 
 // Data and DataFunc both return the same underlying slot.
 func (c *Config) Data() js.Value     { return c.Get("data") }
@@ -35,6 +37,7 @@ func (c *Config) SetData(new js.Value) {
 	c.Set("data", new)
 	c.Set("hvue_data_type", int(js.TypeObject))
 }
+
 func (c *Config) SetDataFunc(newF DataFuncT, fieldNames ...string) {
 	templateObj := NewObject()
 	for _, v := range fieldNames {
@@ -47,7 +50,7 @@ func (c *Config) SetDataFunc(newF DataFuncT, fieldNames ...string) {
 		js.Global().Call("wasm_new_data_func",
 			templateObj,
 			js.NewCallback(func(args []js.Value) {
-				newF(args[0])
+				newF(args[0], args[1])
 			})))
 	c.Set("hvue_data_type", int(js.TypeFunction))
 }

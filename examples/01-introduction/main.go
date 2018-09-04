@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/gopherjs/gopherjs/js"
 	"github.com/gopherjs/gopherwasm/js"
 	"github.com/huckridgesw/hvue"
 )
@@ -21,7 +20,7 @@ func main() {
 	go twoWayBinding()
 	go composingWithComponents()
 
-	time.Sleep(time.Hour)
+	select {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -110,9 +109,6 @@ func twoWayBinding() {
 type Data7 struct{ js.Value }
 type ListItem7 struct{ js.Value }
 
-// func (li *ListItem7) Text() string       { return li.Get("text") }
-// func (li *ListItem7) SetText(new string) { li.Set("text", new) }
-
 func composingWithComponents() {
 	hvue.NewComponent("todo-item",
 		hvue.Props("todo"),
@@ -127,6 +123,7 @@ func composingWithComponents() {
 		hvue.El("#app-7"),
 		hvue.DataS(d7, d7.Value))
 	js.Global().Set("app7", app7.Value)
+	// In the JS console, try app7.groceryList.push({text: "a new item"})
 }
 
 func NewData7(texts ...string) *Data7 {

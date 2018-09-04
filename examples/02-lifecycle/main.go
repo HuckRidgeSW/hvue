@@ -9,7 +9,7 @@ package main
 import (
 	"time"
 
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/gopherwasm/js"
 	"github.com/huckridgesw/hvue"
 )
 
@@ -18,7 +18,7 @@ func main() {
 		hvue.El("#app"),
 		hvue.Data("message", "Hello, Vue!"),
 		hvue.Data("show", 1),
-		hvue.BeforeCreate(func(vm *hvue.VM) { println("BeforeCreate, vm:", vm.Object) }),
+		hvue.BeforeCreate(func(vm *hvue.VM) { js.Global().Get("console").Call("log", "BeforeCreate, vm:", vm.Value) }),
 		hvue.Created(func(vm *hvue.VM) { println("Created") }),
 		hvue.BeforeMount(func(vm *hvue.VM) { println("BeforeMount") }),
 		hvue.Mounted(func(vm *hvue.VM) { println("Mounted") }),
@@ -37,7 +37,7 @@ func main() {
 			hvue.Deactivated(func(vm *hvue.VM) { println("Show2 deactivated") }),
 		),
 	)
-	js.Global.Set("vm", vm)
+	js.Global().Set("vm", vm.Value)
 
 	// Trigger the BeforeUpdate/Updated hooks
 	time.Sleep(time.Second)
@@ -55,4 +55,6 @@ func main() {
 	vm.Call("$destroy")
 
 	// In the JS console, check for logs from the lifecycle.
+
+	select {}
 }

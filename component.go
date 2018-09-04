@@ -17,7 +17,7 @@ func NewComponent(name string, opts ...ComponentOption) {
 	}
 
 	if c.DataFunc() == js.Undefined() {
-		c.SetDataFunc(func(js.Value) {})
+		c.SetDataFunc(func(js.Value, js.Value) {})
 
 		// c.SetData(jsCallWithVM(func(vm *VM) interface{} {
 		// 	obj := NewObject()
