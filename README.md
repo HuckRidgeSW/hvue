@@ -17,6 +17,7 @@ See https://golang.org/dl/.
 cd path/to/github.com # in your $GOPATH
 mkdir huckridgesw
 git clone git@github.com:HuckRidgeSW/hvue.git
+cd hvue
 git checkout wasm
 ```
 
