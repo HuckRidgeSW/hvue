@@ -6,111 +6,121 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/gopherwasm/js"
 	"github.com/huckridgesw/hvue"
 )
-
-var O = func() *js.Object { return js.Global.Get("Object").New() }
 
 // Several examples in one, from
 // https://vuejs.org/v2/guide/list.html
 
 // ItemT is used in all three examples.
 type ItemT struct {
-	*js.Object
-	Message string `js:"message"`
+	js.Value
 }
+
+func (i *ItemT) Message() string       { return i.Get("message").String() }
+func (i *ItemT) SetMessage(new string) { i.Set("message", new) }
 
 func main() {
 	go BasicUsage()
 	go v_for_block()
 	go simpleTodoList()
+
+	select {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Basic usage
 
 type Data1 struct {
-	*js.Object
-	Items []*ItemT `js:"items"`
+	js.Value
 }
+
+func (d *Data1) Items() js.Value              { return d.Get("items") }
+func (d *Data1) Item(i int) js.Value          { return d.Items().Index(i) }
+func (d *Data1) SetItems(new js.Value)        { d.Set("items", new) }
+func (d *Data1) SetItemN(i int, new js.Value) { d.Items().SetIndex(i, new) }
 
 func BasicUsage() {
 	// Basic usage
-	data := &Data1{Object: O()}
-	data.Items = []*ItemT{
-		NewItem("Foo"),
-		NewItem("Bar"),
-	}
+	data := &Data1{Value: hvue.NewObject()}
+	data.SetItems(hvue.NewArray())
+	data.SetItemN(0, NewItem("Foo"))
+	data.SetItemN(1, NewItem("Bar"))
+
 	hvue.NewVM(
 		hvue.El("#example-1"),
-		hvue.DataS(data))
+		hvue.DataS(data, data.Value))
 
 	// Demonstrate reactivity
 	time.Sleep(500 * time.Millisecond)
-	data.Items[0].Message = "Baz"
+	data.Items().Index(0).Set("message", "Baz")
 
 	time.Sleep(500 * time.Millisecond)
-	data.Items[1].Message = "Qux"
+	data.Items().Index(1).Set("message", "Qux")
 
 	// Add a slice element.
 	time.Sleep(500 * time.Millisecond)
-	// I'm surprised that this actually works, but it does appear to.  I tried
-	// appending 1000 items, and they're all reactive in the usual way.
-	// Whatever magic GopherJS and Vue do appears to work together.
-	data.Items = append(data.Items, NewItem("Quux"))
+	data.Items().Call("push", NewItem("Quux"))
 
 	time.Sleep(500 * time.Millisecond)
 	for i := 0; i < 10; i++ {
-		data.Items = append(data.Items, NewItem(strconv.Itoa(i)))
+		data.Items().Call("push", NewItem(strconv.Itoa(i)))
 	}
 	time.Sleep(500 * time.Millisecond)
-	randomSlice := data.Items[3:5]
-	randomSlice[1].Message = "I am randomSlice[1]"
+	randomSlice := data.Items().Call("slice", 3, 5)
+	randomSlice.Index(1).Set("message", "I am randomSlice[1]")
 
 	time.Sleep(500 * time.Millisecond)
-	// Here's the way I would have expected that you'd have to do the above
-	// appending -- slightly longer and more vulnerable to typos (since the
-	// field name is just a string):
-	hvue.Push(data.Get("items"), NewItem("Quuz"))
+	hvue.Push(data.Items(), NewItem("Quuz"))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // v-for example
 
-func v_for_block() {
-	type Data2 struct {
-		*js.Object
-		ParentMessage string   `js:"parentMessage"`
-		Items         []*ItemT `js:"items"`
-	}
+type Data2 struct {
+	js.Value
+	Items []*ItemT `js:"items"`
+}
 
-	data := &Data2{Object: O()}
-	data.ParentMessage = "Parent"
-	data.Items = []*ItemT{
-		NewItem("Foo"),
-		NewItem("Bar"),
-	}
+func (d *Data2) SetParentMessage(new string)  { d.Set("parentMessage", new) }
+func (d *Data2) SetItemN(i int, new js.Value) { d.Get("items").SetIndex(i, new) }
+
+func v_for_block() {
+	data := &Data2{Value: hvue.NewObject()}
+	data.SetParentMessage("Parent")
+	data.Set("items", hvue.NewArray())
+	data.SetItemN(0, NewItem("Foo"))
+	data.SetItemN(1, NewItem("Bar"))
 
 	hvue.NewVM(
 		hvue.El("#example-2"),
-		hvue.DataS(data))
+		hvue.DataS(data, data.Value))
 }
 
 // NewItem is used in both of the above examples
-func NewItem(m string) *ItemT {
-	i := &ItemT{Object: O()}
-	i.Message = m
-	return i
+func NewItem(m string) js.Value {
+	i := &ItemT{Value: hvue.NewObject()}
+	i.SetMessage(m)
+	return i.Value
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Simple todo list example
 
 type Data3 struct {
-	*js.Object
-	NewTodoText string   `js:"newTodoText"`
-	Todos       []string `js:"todos"`
+	js.Value
+}
+
+func (d *Data3) NewTodoText() string       { return d.Get("newTodoText").String() }
+func (d *Data3) SetNewTodoText(new string) { d.Set("newTodoText", new) }
+func (d *Data3) Todos() js.Value           { return d.Get("todos") }
+func (d *Data3) SetTodos(new js.Value)     { d.Set("todos", new) }
+func (d *Data3) SetTodosFromStrings(new ...string) {
+	todo := d.Todos()
+	for i, s := range new {
+		todo.SetIndex(i, s)
+	}
 }
 
 func simpleTodoList() {
@@ -123,36 +133,26 @@ func simpleTodoList() {
 		`),
 		hvue.Props("title"))
 
-	data := &Data3{Object: O()}
-	data.NewTodoText = ""
-	data.Todos = []string{
+	data := &Data3{Value: hvue.NewObject()}
+	data.SetNewTodoText("")
+	data.SetTodos(hvue.NewArray())
+	data.SetTodosFromStrings(
 		"Do the dishes",
 		"Take out the trash",
 		"Mow the lawn",
-	}
+	)
 
 	hvue.NewVM(
 		hvue.El("#todo-list-example"),
-		hvue.DataS(data),
+		hvue.DataS(data, data.Value),
 		hvue.MethodsOf(&Data3{}))
 
 	// Show how to update an array element in place.
 	time.Sleep(500 * time.Millisecond)
-
-	// This doesn't work
-	// data.Todos[1] = "UPDATE: Take out the papers and the trash"
-
-	// This doesn't work either
-	// data.Get("todos").Set(1, "UPDATE: Take out the papers and the trash")
-
-	// Nor this
-	// hvue.Set(data.Todos, 1, "UPDATE: Take out the papers and the trash")
-
-	// You have to use hvue.Set (a wrapper for Vue.set) on the raw JS array.
-	hvue.Set(data.Get("todos"), 1, "UPDATE: Take out the papers and the trash")
+	hvue.Set(data.Todos(), 1, "UPDATE: Take out the papers and the trash")
 }
 
 func (d *Data3) AddNewTodo() {
-	d.Todos = append(d.Todos, d.NewTodoText)
-	d.NewTodoText = ""
+	d.Todos().Call("push", d.NewTodoText())
+	d.SetNewTodoText("")
 }
