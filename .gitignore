@@ -2,3 +2,5 @@
 .*.sw?
 *.bak
 Session*.vim
+build
+tags

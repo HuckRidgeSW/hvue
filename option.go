@@ -28,6 +28,7 @@ func (c *Config) Computed() js.Value   { return c.Get("computed") }
 func (c *Config) Components() js.Value { return c.Get("components") }
 func (c *Config) Filters() js.Value    { return c.Get("filters") }
 func (c *Config) Setters() js.Value    { return c.Get("hvue_setters") }
+func (c *Config) Watchers() js.Value   { return c.Get("watch") }
 
 // SetData and SetDataFunc both set the same underlying slot.
 func (c *Config) SetData(new js.Value) {
@@ -63,6 +64,7 @@ func (c *Config) SetComputed(new js.Value)   { c.Set("computed", new) }
 func (c *Config) SetComponents(new js.Value) { c.Set("components", new) }
 func (c *Config) SetFilters(new js.Value)    { c.Set("filters", new) }
 func (c *Config) SetSetters(new js.Value)    { c.Set("hvue_setters", new) }
+func (c *Config) SetWatchers(new js.Value)   { c.Set("watch", new) }
 
 type ComponentOption func(*Config)
 

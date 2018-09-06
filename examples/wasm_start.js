@@ -13,8 +13,8 @@ if (hvue_wasm) {
 
 	let mod, inst;
 
-	wasm_start = async function(file) {
-		response = await fetch("/examples/wasm_exec.js")
+	wasm_start = async function(name) {
+		response = await fetch("/vendor/wasm_exec.js")
 		if(response.ok) {
 			const source = await (await response).text();
 		   eval(source);
@@ -23,7 +23,7 @@ if (hvue_wasm) {
 			throw new Error('Network response was not ok.');
 		}
 
-		WebAssembly.instantiateStreaming(fetch("/examples/wasm/"+file+".wasm"), go.importObject).then((result) => {
+		WebAssembly.instantiateStreaming(fetch("/examples/"+name+"/"+name+".wasm"), go.importObject).then((result) => {
 			mod = result.module;
 			inst = result.instance;
 			go.run(inst);
@@ -31,9 +31,8 @@ if (hvue_wasm) {
 	}
 
 } else {
-	wasm_start = async function(file) {
-		// OMG FIXME
-		response = await fetch("/examples/"+file+"/"+file+".js")
+	wasm_start = async function(name) {
+		response = await fetch("/examples/"+name+"/"+name+".js")
 		if(response.ok) {
 			const source = await response.text();
 			eval(source);
@@ -71,4 +70,3 @@ function wasm_new_data_func(templateObj, f) {
 		return newO;
 	}
 }
-

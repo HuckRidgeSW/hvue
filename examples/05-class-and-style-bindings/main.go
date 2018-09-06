@@ -6,21 +6,21 @@ package main
 import (
 	"time"
 
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/gopherwasm/js"
 	"github.com/huckridgesw/hvue"
 )
 
 type ClassObject struct {
-	*js.Object
-	Active     bool `js:"active"`
-	TextDanger bool `js:"text_danger"`
+	js.Value
 }
 
 func main() {
 	go dynamically_toggle_classes()
 	go doesnt_have_to_be_inline()
-	go bind_to_a_computed_property()
+	// go bind_to_a_computed_property()
 	go binding_styles()
+
+	select {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -28,20 +28,21 @@ func main() {
 func dynamically_toggle_classes() {
 	// "We can pass an object to v-bind:class to dynamically toggle classes"
 	data1 := &struct {
-		*js.Object
-		IsActive bool `js:"isActive"`
-	}{Object: hvue.NewObject()}
-	data1.IsActive = false
+		js.Value
+	}{Value: hvue.NewObject()}
+	data1.Set("isActive", false)
 
-	hvue.NewVM(
+	app1 := hvue.NewVM(
 		hvue.El("#object-syntax-1"),
-		hvue.DataS(data1))
+		hvue.DataS(data1, data1.Value))
+	js.Global().Set("app1", app1.Value)
 
 	go func() {
 		time.Sleep(time.Second)
-		data1.IsActive = true
-		println("isActive:", data1.IsActive)
+		data1.Set("isActive", true)
+		println("isActive:", data1.Get("isActive").String())
 	}()
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,68 +50,75 @@ func dynamically_toggle_classes() {
 func doesnt_have_to_be_inline() {
 	// "The bound object doesn’t have to be inline"
 	data2 := &struct {
-		*js.Object
-		*ClassObject `js:"classObject"`
-	}{Object: hvue.NewObject()}
-	data2.ClassObject = &ClassObject{Object: hvue.NewObject()}
-	data2.ClassObject.Active = false
-	data2.ClassObject.TextDanger = false
+		js.Value
+		*ClassObject
+	}{Value: hvue.NewObject(), ClassObject: &ClassObject{Value: hvue.NewObject()}}
+	data2.Set("classObject", data2.ClassObject.Value)
+	data2.ClassObject.Set("active", true)
+	data2.ClassObject.Set("text-danger", false)
 
-	hvue.NewVM(
+	app2 := hvue.NewVM(
 		hvue.El("#object-syntax-2"),
-		hvue.DataS(data2))
+		hvue.DataS(data2, data2.Value))
+	js.Global().Set("app2", app2.Value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// Computed properties don't work right now.
+/*
 func bind_to_a_computed_property() {
 	// "We can also bind to a computed property that returns an object"
 	type errorType struct {
-		*js.Object
+		js.Value
 		Type string `js:"type"`
 	}
 	data3 := &struct {
-		*js.Object
+		js.Value
 		IsActive bool       `js:"isActive"`
 		Error    *errorType `js:"error"`
-	}{Object: hvue.NewObject()}
+	}{Value: hvue.NewObject()}
 	data3.IsActive = false
 	data3.Error = nil
 
 	hvue.NewVM(
 		hvue.El("#object-syntax-3"),
-		hvue.DataS(data3),
+		hvue.DataS(data3, data3.Value),
 		hvue.Computed(
 			"classObject",
 			func(vm *hvue.VM) interface{} {
-				co := &ClassObject{Object: hvue.NewObject()}
-				co.Active = data3.IsActive && data3.Error.Object == nil
-				co.TextDanger = data3.Error.Object != nil &&
+				co := &ClassObject{Value: hvue.NewObject()}
+				co.Active = data3.IsActive && data3.Error.Value == nil
+				co.TextDanger = data3.Error.Value != nil &&
 					data3.Error.Type == "fatal"
 				return co
 			}))
 }
+*/
 
 ////////////////////////////////////////////////////////////////////////////////
 
+type StyleObject struct {
+	js.Value
+}
+
+func (so *StyleObject) SetColor(new string)    { so.Set("color", new) }
+func (so *StyleObject) SetFontSize(new string) { so.Set("fontSize", new) }
+
 func binding_styles() {
 	// Binding styles
-	type StyleObject struct {
-		*js.Object
-		Color    string `js:"color"`
-		FontSize string `js:"fontSize"`
-	}
 	data4 := &struct {
-		*js.Object
-		*StyleObject `js:"styleObject"`
-	}{Object: hvue.NewObject()}
-	data4.StyleObject = &StyleObject{Object: hvue.NewObject()}
-	// As of this writing, you can't assign data4.Color or FontSize directly.
-	// See https://github.com/gopherjs/gopherjs/issues/640.
-	data4.StyleObject.Color = "red"
-	data4.StyleObject.FontSize = "13px"
+		js.Value
+		*StyleObject
+	}{
+		Value:       hvue.NewObject(),
+		StyleObject: &StyleObject{Value: hvue.NewObject()},
+	}
+	data4.Set("styleObject", data4.StyleObject.Value)
+	data4.SetColor("red")
+	data4.SetFontSize("13px")
 
 	hvue.NewVM(
 		hvue.El("#object-syntax-4"),
-		hvue.DataS(data4))
+		hvue.DataS(data4, data4.Value))
 }

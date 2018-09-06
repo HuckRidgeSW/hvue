@@ -107,7 +107,7 @@ func DataFunc(f func(*VM) interface{}) ComponentOption {
 		//
 		// FIXME: This is pretty wrong right now.  f needs to take a js.Value
 		// and initialize the fields in it.  Also, the JS data function thunk
-		//     arranges for the vm to be in the dataObj.hvue_vm
+		// arranges for the vm to be in the dataObj.hvue_vm
 		panic("this is wrong")
 
 		// c.SetDataFunc(jsCallWithVM(func(vm *VM) interface{} {
@@ -276,6 +276,21 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 			}
 			return nil
 		})
+}
+
+func Watch(name string, f func(*VM)) ComponentOption {
+	return func(c *Config) {
+		if c.Watchers() == js.Undefined() {
+			c.SetWatchers(NewObject())
+		}
+
+		c.Watchers().Set(
+			name,
+			jsCallWithVM(func(vm *VM) interface{} {
+				f(vm)
+				return nil
+			}))
+	}
 }
 
 // FIXME: A filter function needs to be able to return a value, which Go
