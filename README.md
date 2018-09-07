@@ -16,16 +16,17 @@ See https://golang.org/dl/.
 ```bash
 cd path/to/github.com # in your $GOPATH
 mkdir huckridgesw
+cd huckridgesw
 git clone git@github.com:HuckRidgeSW/hvue.git
 cd hvue
-git checkout wasm
+git checkout --track origin/wasm
 ```
 
 # Examples & Demos
 
 ## Overview
 
-***Note: As of this writing, only examples 01 & 02 have been converted & tested to run under both GopherJS and go/wasm.***
+***Note: As of this writing, only examples 01-06 have been converted & tested to run under both GopherJS and go/wasm.***
 
 Generally speaking, the [examples](https://github.com/HuckRidgeSW/hvue/tree/master/examples)
 follow the examples in the Vue [guide](https://vuejs.org/v2/guide/).
@@ -65,12 +66,13 @@ cd path/to/github.com/huckridgesw/hvue
 echo "var hvue_wasm = true;" > examples/maybe_wasm.js
 go run examples/server/main.go # Listens on 8081
 cd examples/??-???? # some examples directory
-GOARCH=wasm GOOS=js go build -o ../wasm/${PWD##*/}.wasm main.go # compile wasm
+GOARCH=wasm GOOS=js go build -o ${PWD##*/}.wasm main.go # compile wasm
 ```
 
 and then
 - http://localhost:8081/examples/01-introduction/
 - http://localhost:8081/examples/02-lifecycle/
+- http://localhost:8081/examples/ for more
 
 Remember to recompile after any changes.  There's no facility yet to
 auto-build yet (a-la `gopherjs build -w` or `gopherjs serve`).
