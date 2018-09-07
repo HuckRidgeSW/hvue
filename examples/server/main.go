@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/gopherjs/gopherwasm/js"
 )
 
 func wasmHandler(w http.ResponseWriter, r *http.Request) {
@@ -12,6 +14,7 @@ func wasmHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("wasm path is /%s\n", r.URL.Path[1:])
 	} else {
 		log.Printf("path is /%s\n", r.URL.Path[1:])
+		js.Value
 	}
 	http.ServeFile(w, r, r.URL.Path[1:])
 }

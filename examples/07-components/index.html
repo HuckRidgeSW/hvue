@@ -52,7 +52,7 @@
 		prop-b is not, so it's just a string.  If you say :prop-b, foo is assumed
 		to be a method on the vm and called as a function.
 		Change prop-f to 9 to make it fail validation.  See the JS console for
-		the warning.
+		the warning.  (FIXME: Validation doesn't work.)
 		-->
 		<child2 :prop-a="10" prop-b="foo" prop-c="bar"
 			:prop-f="11"
@@ -110,6 +110,8 @@
 </body>
 
 <script src="/vendor/vue.js"></script>
-<script src="07-components.js"></script>
+<script src="/examples/maybe_wasm.js"></script>
+<script src="/examples/wasm_start.js"></script>
+<script>wasm_start("07-components")</script>
 </html>
 

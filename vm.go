@@ -85,7 +85,7 @@ func DataS(goValue interface{}, jsValue js.Value) ComponentOption {
 		}
 		c.SetData(jsValue)
 		// c.dataValue = reflect.ValueOf(jsValue).Elem()
-		storeDataID(c.Data(), goValue, c)
+		storeDataID(jsValue, goValue, c)
 	}
 }
 
@@ -98,34 +98,12 @@ func DataS(goValue interface{}, jsValue js.Value) ComponentOption {
 // as with MethodsOf.  MethodsOf requires an object when you call NewVM to
 // register the VM, long before the VM is actually created or bound; this is
 // called every time a new VM or component is created.
-func DataFunc(f func(*VM) interface{}) ComponentOption {
+func DataFunc(f DataFuncT, fieldNames ...string) ComponentOption {
 	return func(c *Config) {
 		if c.Data() != js.Undefined() {
-			panic("Cannot use hvue.DataFunc together with any other Data* options")
+			panic("Cannot use hvue.DataFunc together with any other Data/DataS options")
 		}
-		// See comment about c.Data in DataS().
-		//
-		// FIXME: This is pretty wrong right now.  f needs to take a js.Value
-		// and initialize the fields in it.  Also, the JS data function thunk
-		// arranges for the vm to be in the dataObj.hvue_vm
-		panic("this is wrong")
-
-		// c.SetDataFunc(jsCallWithVM(func(vm *VM) interface{} {
-
-		// 	// Get the new data object
-		// 	value := f(vm)
-
-		// 	// Find the js.Value in field 0, however deep.
-		// 	// FIXME: If the types are wrong at any point (not pointer to a
-		// 	// struct at each level), then this'll fail with a
-		// 	// probably-not-very-clear error message.
-		// 	i := reflect.ValueOf(value).Elem().Field(0)
-		// 	for i.Type() != jsOType {
-		// 		i = i.Elem().Field(0)
-		// 	}
-		// 	storeDataID(i.Interface().(js.Value), value, c)
-		// 	return value
-		// }))
+		c.SetDataFunc(f, fieldNames...)
 	}
 }
 
@@ -348,4 +326,19 @@ func (vm *VM) Set(key string, value interface{}) {
 		panic("Unknown data slot set: " + key)
 	}
 	vm.Value.Set(key, value)
+}
+
+// Modeled on GopherJS's js.M, also a map[string]interface{}
+type M map[string]interface{}
+
+func Map2Obj(m M) js.Value {
+	res := NewObject()
+	for k, v := range m {
+		if m, ok := v.(M); ok {
+			res.Set(k, Map2Obj(m))
+		} else {
+			res.Set(k, v)
+		}
+	}
+	return res
 }

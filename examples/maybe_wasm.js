@@ -1,1 +1,1 @@
-var hvue_wasm = true;
+var hvue_wasm = false;

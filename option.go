@@ -8,13 +8,10 @@ import (
 type Config struct {
 	js.Value
 
+	dataType js.Type
 	// Not sure how to handle this yet
 	// dataValue reflect.Value
 }
-
-// The type of function passed to SetDataFunc, to initialize the fields for a
-// new data object in a Vue component.
-type DataFuncT func(vm js.Value, dataObj js.Value)
 
 // Data and DataFunc both return the same underlying slot.
 func (c *Config) Data() js.Value     { return c.Get("data") }
@@ -36,8 +33,12 @@ func (c *Config) SetData(new js.Value) {
 		panic("SetData must use an object; got " + new.Type().String() + ", value " + new.String())
 	}
 	c.Set("data", new)
-	c.Set("hvue_data_type", int(js.TypeObject))
+	c.dataType = js.TypeObject
 }
+
+// The type of function passed to SetDataFunc, to initialize the fields for a
+// new data object in a Vue component.
+type DataFuncT func(vm *VM, dataObj js.Value) interface{}
 
 func (c *Config) SetDataFunc(newF DataFuncT, fieldNames ...string) {
 	templateObj := NewObject()
@@ -51,9 +52,14 @@ func (c *Config) SetDataFunc(newF DataFuncT, fieldNames ...string) {
 		js.Global().Call("wasm_new_data_func",
 			templateObj,
 			js.NewCallback(func(args []js.Value) {
-				newF(args[0], args[1])
+				// Initialize the new data object; get a Go object back.
+				value := newF(&VM{Value: args[0]}, args[1])
+				storeDataID(args[1], value, c)
+
+				// FIXME: This should be able to return a value
+				// return value
 			})))
-	c.Set("hvue_data_type", int(js.TypeFunction))
+	c.dataType = js.TypeFunction
 }
 
 func (c *Config) SetProps(new js.Value)      { c.Set("props", new) }
@@ -80,11 +86,15 @@ type PropOption func(*PropConfig)
 // PropConfig is the config object for Props
 type PropConfig struct {
 	js.Value
-	typ       js.Value    `js:"type"`
-	required  bool        `js:"required"`
-	def       interface{} `js:"default"`
-	validator js.Value    `js:"validator"`
+	// typ       js.Value    `js:"type"`
+	// required  bool        `js:"required"`
+	// def       interface{} `js:"default"`
+	// validator js.Value    `js:"validator"`
 }
+
+func (pc *PropConfig) SetType(t js.Value)       { pc.Set("type", t) }
+func (pc *PropConfig) SetRequired(r bool)       { pc.Set("required", r) }
+func (pc *PropConfig) SetDefault(d interface{}) { pc.Set("default", d) }
 
 func (p *PropConfig) Option(opts ...PropOption) {
 	for _, opt := range opts {

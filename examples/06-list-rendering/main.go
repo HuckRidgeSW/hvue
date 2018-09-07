@@ -80,16 +80,16 @@ func BasicUsage() {
 
 type Data2 struct {
 	js.Value
-	Items []*ItemT `js:"items"`
 }
 
+func (d *Data2) SetItems(new js.Value)        { d.Set("items", new) }
 func (d *Data2) SetParentMessage(new string)  { d.Set("parentMessage", new) }
 func (d *Data2) SetItemN(i int, new js.Value) { d.Get("items").SetIndex(i, new) }
 
 func v_for_block() {
 	data := &Data2{Value: hvue.NewObject()}
 	data.SetParentMessage("Parent")
-	data.Set("items", hvue.NewArray())
+	data.SetItems(hvue.NewArray())
 	data.SetItemN(0, NewItem("Foo"))
 	data.SetItemN(1, NewItem("Bar"))
 
@@ -109,7 +109,7 @@ func NewItem(m string) js.Value {
 // Simple todo list example
 
 type Data3 struct {
-	js.Value
+	js.Value // `js:"newTodoText:string; todos: []string;"`
 }
 
 func (d *Data3) NewTodoText() string       { return d.Get("newTodoText").String() }
@@ -121,6 +121,12 @@ func (d *Data3) SetTodosFromStrings(new ...string) {
 	for i, s := range new {
 		todo.SetIndex(i, s)
 	}
+}
+
+// Event handler, called from html.
+func (d *Data3) AddNewTodo() {
+	d.Todos().Call("push", d.NewTodoText())
+	d.SetNewTodoText("")
 }
 
 func simpleTodoList() {
@@ -150,9 +156,4 @@ func simpleTodoList() {
 	// Show how to update an array element in place.
 	time.Sleep(500 * time.Millisecond)
 	hvue.Set(data.Todos(), 1, "UPDATE: Take out the papers and the trash")
-}
-
-func (d *Data3) AddNewTodo() {
-	d.Todos().Call("push", d.NewTodoText())
-	d.SetNewTodoText("")
 }

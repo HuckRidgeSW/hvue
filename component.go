@@ -11,23 +11,8 @@ func NewComponent(name string, opts ...ComponentOption) {
 	c.SetSetters(NewObject())
 	c.Option(opts...)
 
-	dataType := c.Get("hvue_data_type")
-	if dataType != js.Undefined() && js.Type(dataType.Int()) != js.TypeFunction {
+	if c.dataType != js.TypeUndefined && c.dataType != js.TypeFunction {
 		panic("Cannot use Data() with NewComponent, must use DataFunc.  Component: " + name)
-	}
-
-	if c.DataFunc() == js.Undefined() {
-		c.SetDataFunc(func(js.Value, js.Value) {})
-
-		// c.SetData(jsCallWithVM(func(vm *VM) interface{} {
-		// 	obj := NewObject()
-		// 	// Get the parent data object ID, if it exists
-		// 	dataID := vm.Get("$parent").Get("$data").Get("hvue_dataID")
-		// 	if dataID != js.Undefined() {
-		// 		obj.Set("hvue_dataID", dataID)
-		// 	}
-		// 	return obj
-		// }))
 	}
 
 	js.Global().Get("Vue").Call("component", name, c.Value)
@@ -87,7 +72,7 @@ func Template(template string) ComponentOption {
 // https://vuejs.org/v2/guide/components.html#Props.
 func Types(types ...pOptionType) PropOption {
 	return func(p *PropConfig) {
-		arr := js.Global().Get("Array").New()
+		arr := NewArray()
 		for _, t := range types {
 			var newVal js.Value
 			switch t {
@@ -106,41 +91,49 @@ func Types(types ...pOptionType) PropOption {
 			}
 			arr.Call("push", newVal)
 		}
-		p.typ = arr
+		p.SetType(arr)
 	}
 }
 
 // Required specifies that the prop is required.
 // https://vuejs.org/v2/guide/components.html#Props.
 var Required PropOption = func(p *PropConfig) {
-	p.required = true
+	p.SetRequired(true)
 }
 
 // Default gives the default for a prop.
 // https://vuejs.org/v2/guide/components.html#Props
 func Default(def interface{}) PropOption {
 	return func(p *PropConfig) {
-		p.def = def
+		p.SetDefault(def)
 	}
 }
 
 // DefaultFunc sets a function that returns the default for a prop.
 // https://vuejs.org/v2/guide/components.html#Props
-func DefaultFunc(def func(*VM) interface{}) PropOption {
+//
+// FIXME: Right now, can only pass an object (not a function).  The JS helper
+// function copies it to a new object.  Later, need to be able to pass a
+// function, which returns a new value.
+func DefaultFunc(def js.Value) PropOption {
 	return func(p *PropConfig) {
-		p.def = jsCallWithVM(def)
+		p.SetDefault(js.Global().Call("wasm_return_copy", def))
 	}
 }
 
 // Validator functions generate warnings in the JS console if using the
 // vue.js development build.  They don't panic or otherwise crash your code,
 // they just give warnings if the validation fails.
+//
+// FIXME: Currently does nothing, because in 1.11 Go functions called from JS
+// can't return values.
 func Validator(f func(vm *VM, value js.Value) interface{}) PropOption {
 	return func(p *PropConfig) {
-		p.validator = NewCallback(
-			func(this js.Value, args []js.Value) interface{} {
-				vm := &VM{Value: this}
-				return f(vm, args[0])
-			})
+		return
+		// p.SetValidator(NewCallback(
+		// 	func(this js.Value, args []js.Value) interface{} {
+		// 		vm := &VM{Value: this}
+		// 		return f(vm, args[0])
+		// 	})
 	}
 }

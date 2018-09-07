@@ -35,7 +35,7 @@ func main() {
 	d := &Data{Value: hvue.NewObject()}
 	d.SetFullName("Foo Bar")
 
-	vm := hvue.NewVM(
+	hvue.NewVM(
 		hvue.El("#demo"),
 		hvue.DataS(d, d.Value),
 		// ComputedWithGetSet not implemented
@@ -55,8 +55,10 @@ func main() {
 	)
 
 	time.Sleep(time.Second)
-	vm.Set("fullName", "First Middle Last")
+	d.SetFullName("First Middle Last")
 	// Note that FirstName & LastName are changed, too, and that "Middle"
 	// is effectively ignored: the full value is not stored, but computed
 	// from FirstName & LastName.
+
+	select {}
 }

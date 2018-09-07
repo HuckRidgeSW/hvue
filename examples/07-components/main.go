@@ -3,14 +3,9 @@ package main
 // From https://vuejs.org/v2/guide/components.html
 
 import (
-	"strconv"
-	"strings"
-
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/gopherwasm/js"
 	"github.com/huckridgesw/hvue"
 )
-
-var O = func() *js.Object { return js.Global.Get("Object").New() }
 
 // Several examples in one, from
 // https://vuejs.org/v2/guide/components.html
@@ -22,9 +17,11 @@ func main() {
 	go passDataWithProps()
 	go propValidation()
 	go counterEvent()
-	go counterEventWithChannel()
-	go currencyInput()
-	go moreRobustCurrencyInput()
+	// go counterEventWithChannel()
+	// go currencyInput()
+	// go moreRobustCurrencyInput()
+
+	select {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,22 +46,24 @@ func localRegistration() {
 
 func dataMustBeAFunction() {
 	type DataT struct {
-		*js.Object
-		counter int `js:"counter"`
+		js.Value
 	}
 
 	// How NOT to do it: Since all three component instances share the same
 	// data object, incrementing one counter increments them all! Ouch.
-	data := hvue.NewT(&DataT{counter: 0}).(*DataT)
+	data := hvue.Map2Obj(hvue.M{"counter": 0})
 	hvue.NewComponent(
 		"simple-counter1",
 		hvue.Template(`<button v-on:click="counter += 1">{{ counter }}</button>`),
 		// Return the same object reference for each component instance.  This
 		// is an example of how NOT to do data in components.  See the Vue
 		// example.
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			return data
-		}))
+		//
+		// Have to use a custom ComponentOption function, because hvue.DataFunc
+		// returns a new object each time.
+		func(c *hvue.Config) {
+			c.Set("data", js.Global().Call("wasm_return_thing", data))
+		})
 	hvue.NewVM(hvue.El("#example-2-a"))
 
 	// Let’s fix this by instead returning a fresh data object:
@@ -72,11 +71,10 @@ func dataMustBeAFunction() {
 		"simple-counter2",
 		hvue.Template(`<button v-on:click="counter += 1">{{ counter }}</button>`),
 		// Return a different object for each component
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			// You *can* do the type-assert to its actual type, but you don't
-			// *have* to.
-			return hvue.NewT(&DataT{counter: 0}).(*DataT)
-		}))
+		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
+			o.Set("counter", 0)
+			return &DataT{Value: o}
+		}, "counter"))
 	hvue.NewVM(hvue.El("#example-2-b"))
 }
 
@@ -117,11 +115,9 @@ func propValidation() {
 			hvue.Default(100)),
 		hvue.PropObj("propE",
 			hvue.Types(hvue.PObject),
-			hvue.DefaultFunc(func(*hvue.VM) interface{} {
-				return js.M{"message": "hello"}
-			})),
+			hvue.DefaultFunc(hvue.Map2Obj(hvue.M{"message": "hello"}))),
 		hvue.PropObj("propF",
-			hvue.Validator(func(vm *hvue.VM, value *js.Object) interface{} {
+			hvue.Validator(func(vm *hvue.VM, value js.Value) interface{} {
 				return value.Int() > 10
 			})),
 	)
@@ -133,38 +129,41 @@ func propValidation() {
 // https://vuejs.org/v2/guide/components.html#Using-v-on-with-Custom-Events
 
 type ButtonCounterT struct {
-	*js.Object
-	Counter int `js:"counter"`
+	js.Value
+	// Counter int `js:"counter"`
 }
 
 type CounterEventT struct {
-	*js.Object
-	Total int `js:"total"`
+	js.Value
+	// Total int `js:"total"`
 }
 
 func counterEvent() {
 	hvue.NewComponent("button-counter",
 		hvue.Template(`<button v-on:click="Increment">{{ counter }}</button>`),
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			return hvue.NewT(&ButtonCounterT{Counter: 0})
-		}),
+		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
+			o.Set("counter", 0)
+			return &ButtonCounterT{Value: o}
+		}, "counter"),
 		hvue.MethodsOf(&ButtonCounterT{}))
+	data2 := &CounterEventT{Value: hvue.Map2Obj(hvue.M{"total": 0})}
 	hvue.NewVM(
 		hvue.El("#counter-event-example"),
-		hvue.DataS(hvue.NewT(&CounterEventT{Total: 0})),
+		hvue.DataS(data2, data2.Value),
 		hvue.MethodsOf(&CounterEventT{}))
 }
 
 func (o *ButtonCounterT) Increment(vm *hvue.VM) {
-	o.Counter++
+	o.Set("counter", o.Get("counter").Int()+1)
 	vm.Emit("increment")
 
 }
 
 func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
-	o.Total++
+	o.Set("total", o.Get("total").Int()+1)
 }
 
+/*
 ////////////////////////////////////////////////////////////////////////////////
 
 // https://vuejs.org/v2/guide/components.html#Using-v-on-with-Custom-Events
@@ -175,14 +174,14 @@ func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
 // Vue event model, badly.
 
 type ButtonCounterWithChannelT struct {
-	*js.Object
+	js.Value
 	Counter int `js:"counter"`
 	eventCh chan string
 }
 
 // Reused from above
 // type CounterEventT struct {
-// 	*js.Object
+// 	js.Value
 // 	Total int `js:"total"`
 // }
 
@@ -230,7 +229,7 @@ func (o *ButtonCounterWithChannelT) Increment(vm *hvue.VM) {
 // https://vuejs.org/v2/guide/components.html#Form-Input-Components-using-Custom-Events
 
 type CurrencyData struct {
-	*js.Object
+	js.Value
 	Price string `js:"price"`
 }
 
@@ -304,7 +303,7 @@ func dotPlus3(value string) int {
 // Still from https://vuejs.org/v2/guide/components.html#Form-Input-Components-using-Custom-Events
 
 type CurrencyInputT struct {
-	*js.Object
+	js.Value
 	Price    float64 `js:"price"`
 	Shipping float64 `js:"shipping"`
 	Handling float64 `js:"handling"`
@@ -356,7 +355,7 @@ func moreRobustCurrencyInput() {
 		}))
 }
 
-func (c *CurrencyInputT) UpdateValue(vm *hvue.VM, value *js.Object) {
+func (c *CurrencyInputT) UpdateValue(vm *hvue.VM, value js.Value) {
 	result := js.Global.Get("currencyValidator").
 		Call("parse", value, vm.Get("value"))
 	if result.Get("warning") != js.Undefined {
@@ -375,3 +374,5 @@ func (c *CurrencyInputT) SelectAll(vm *hvue.VM, event *hvue.Event) {
 		event.Get("target").Call("select")
 	})
 }
+
+*/

@@ -64,9 +64,21 @@ function wasm_new_data_func(templateObj, f) {
 			}
 		}
 
-		// Call the hvue function to initialize these fields
+		// Call the Go function to initialize these fields
 		f(this, newO); // wasm: runs later; GopherJS: runs now
 
 		return newO;
+	}
+}
+
+function wasm_return_thing(thing) {
+	return function () {
+		return thing;
+	};
+}
+
+function wasm_return_copy(thing) {
+	return function() {
+		return Object.assign({}, thing)
 	}
 }
