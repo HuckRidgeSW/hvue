@@ -1,6 +1,8 @@
 package hvue
 
 import (
+	"reflect"
+
 	"github.com/gopherjs/gopherwasm/js"
 )
 
@@ -8,9 +10,8 @@ import (
 type Config struct {
 	js.Value
 
-	dataType js.Type
-	// Not sure how to handle this yet
-	// dataValue reflect.Value
+	DataType  js.Type
+	dataValue reflect.Value
 }
 
 // Data and DataFunc both return the same underlying slot.
@@ -33,7 +34,7 @@ func (c *Config) SetData(new js.Value) {
 		panic("SetData must use an object; got " + new.Type().String() + ", value " + new.String())
 	}
 	c.Set("data", new)
-	c.dataType = js.TypeObject
+	c.DataType = js.TypeObject
 }
 
 // The type of function passed to SetDataFunc, to initialize the fields for a
@@ -59,7 +60,7 @@ func (c *Config) SetDataFunc(newF DataFuncT, fieldNames ...string) {
 				// FIXME: This should be able to return a value
 				// return value
 			})))
-	c.dataType = js.TypeFunction
+	c.DataType = js.TypeFunction
 }
 
 func (c *Config) SetProps(new js.Value)      { c.Set("props", new) }

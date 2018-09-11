@@ -54,9 +54,7 @@ function wasm_new_data_func(templateObj, f) {
 
 		// Create a new object, based on the template
 		newO = Object.assign({}, templateObj);
-		// newO.hvue_vm = this;
 
-		// Not sure I need this?
 		if (newO.hvue_dataID === undefined) {
 			var dataID = this.$parent.$data.hvue_dataID;
 			if (dataID !== undefined) {

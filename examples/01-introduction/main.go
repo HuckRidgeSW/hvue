@@ -70,12 +70,18 @@ func displayAList() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-type Data5 struct{ js.Value }
+type Data5 struct {
+	js.Value
+
+	// Demonstrate hvue.NewVM setting a *hvue.VM field of a data object
+	*hvue.VM
+}
 
 func (d *Data5) Message() string       { return d.Get("message").String() }
-func (d *Data5) SetMessage(new string) { d.Set("message", new) }
+func (d *Data5) SetMessage(new string) { d.Value.Set("message", new) }
 
 func (d *Data5) ReverseMessage() {
+	hvue.Log("Data5.ReverseMessage: d.VM:", d.VM.Value)
 	d.SetMessage(reverse(d.Message()))
 }
 

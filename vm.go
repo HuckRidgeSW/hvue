@@ -47,11 +47,11 @@ func NewVM(opts ...ComponentOption) *VM {
 	c.SetSetters(NewObject())
 	c.Option(opts...)
 	vm := &VM{Value: js.Global().Get("Vue").New(c.Value)}
-	// if c.dataValue.IsValid() {
-	// 	if vmField := c.dataValue.FieldByName("VM"); vmField.IsValid() {
-	// 		vmField.Set(reflect.ValueOf(vm))
-	// 	}
-	// }
+	if c.dataValue.IsValid() {
+		if vmField := c.dataValue.FieldByName("VM"); vmField.IsValid() {
+			vmField.Set(reflect.ValueOf(vm))
+		}
+	}
 	vm.SetSetters(c.Setters())
 	return vm
 }
@@ -66,7 +66,7 @@ func El(selector string) ComponentOption {
 // Data sets a single data field.  Data can be called multiple times for the
 // same vm.
 //
-// FIXME: You can't use MethodsOf with this function.
+// Note that you can't use MethodsOf with this function.
 func Data(name string, value interface{}) ComponentOption {
 	return func(c *Config) {
 		if c.Data() == js.Undefined() {
@@ -76,15 +76,15 @@ func Data(name string, value interface{}) ComponentOption {
 	}
 }
 
-// DataS sets the object `value` as the entire contents of the vm's data
-// field.  FIXME: If the object has a VM field, NewVM sets it to the new VM object.
+// DataS sets the object `goValue` as the entire contents of the vm's data
+// field.  If the object has a VM field, NewVM sets it to the new VM object.
 func DataS(goValue interface{}, jsValue js.Value) ComponentOption {
 	return func(c *Config) {
 		if c.Data() != js.Undefined() {
 			panic("Cannot use hvue.DataS together with any other Data* options")
 		}
 		c.SetData(jsValue)
-		// c.dataValue = reflect.ValueOf(jsValue).Elem()
+		c.dataValue = reflect.ValueOf(goValue).Elem()
 		storeDataID(jsValue, goValue, c)
 	}
 }
@@ -112,8 +112,6 @@ func DataFunc(f DataFuncT, fieldNames ...string) ComponentOption {
 // This wouldn't work if the js.Value is sealed or not "plain" (like
 // WebSocket).  But on the other hand, Vue won't work with non-plain or sealed
 // objects, so it doesn't matter.
-//
-// FIXME: Do I still need this?
 func storeDataID(o js.Value, value interface{}, c *Config) {
 	curID := nextDataID // small race condition here
 	nextDataID++
@@ -207,41 +205,45 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 				if goArg >= numIn {
 					break
 				}
-				switch mType.In(goArg).Kind() {
-				case reflect.Ptr:
-					inPtrType := mType.In(goArg)
-					switch inPtrType {
-					case jsOType:
-						// A js.Value
-						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg])
-					case vmType:
-						// A *VM
-						if vmDone {
-							panic("Only a single *hvue.VM arg expected per method: " + name)
-						}
-						goArgs[goArg] = reflect.ValueOf(&VM{Value: this})
-						jsArg--
-						vmDone = true
-					default:
-						// Expects a pointer to a struct with first field
-						// of type js.Value.  Doesn't work yet with nested
-						// structs.
-						inType := inPtrType.Elem()
-						inArg := reflect.New(inType)
-						inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[jsArg]))
-						goArgs[goArg] = inArg
-					}
-				case reflect.String:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].String())
-				case reflect.Bool:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Bool())
-				case reflect.Float64:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Float())
-				case reflect.Int64, reflect.Int32, reflect.Int:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Int())
+
+				switch mType.In(goArg) {
+				case jsOType:
+					// A js.Value
+					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg])
 				default:
-					panic("Unknown type in arglist for " +
-						name + ": " + mType.In(goArg).Kind().String())
+					switch mType.In(goArg).Kind() {
+					case reflect.Ptr:
+						inPtrType := mType.In(goArg)
+						switch inPtrType {
+						case vmType:
+							// A *VM
+							if vmDone {
+								panic("Only a single *hvue.VM arg expected per method: " + name)
+							}
+							goArgs[goArg] = reflect.ValueOf(&VM{Value: this})
+							jsArg--
+							vmDone = true
+						default:
+							// Expects a pointer to a struct with first field
+							// of type js.Value.  Doesn't work yet with nested
+							// structs.
+							inType := inPtrType.Elem()
+							inArg := reflect.New(inType)
+							inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[jsArg]))
+							goArgs[goArg] = inArg
+						}
+					case reflect.String:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].String())
+					case reflect.Bool:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Bool())
+					case reflect.Float64:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Float())
+					case reflect.Int64, reflect.Int32, reflect.Int:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Int())
+					default:
+						panic("hvue.makeMethod: Unknown type in arglist for " +
+							name + ": " + mType.In(goArg).Kind().String())
+					}
 				}
 			}
 

@@ -40,3 +40,7 @@ func NewCallback(f func(this js.Value, args []js.Value) interface{}) js.Value {
 			f(args[0], args[1:])
 		}))
 }
+
+func Log(args ...interface{}) {
+	js.Global().Get("console").Call("log", args...)
+}

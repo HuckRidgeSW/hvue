@@ -11,7 +11,14 @@ func NewComponent(name string, opts ...ComponentOption) {
 	c.SetSetters(NewObject())
 	c.Option(opts...)
 
-	if c.dataType != js.TypeUndefined && c.dataType != js.TypeFunction {
+	if c.DataType == js.TypeUndefined {
+		// wasm_new_data_func takes care of the hvue_dataID magic.
+		c.Set("data",
+			js.Global().Call("wasm_new_data_func",
+				NewObject(), // call wasm_new_data_func with a blank template
+				js.NewCallback(func([]js.Value) {}),
+			))
+	} else if c.DataType != js.TypeFunction {
 		panic("Cannot use Data() with NewComponent, must use DataFunc.  Component: " + name)
 	}
 
