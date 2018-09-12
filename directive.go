@@ -13,15 +13,20 @@ type Directive struct {
 // DirectiveBinding wraps the js{binding} slot of the directive hook argument.
 // https://vuejs.org/v2/guide/custom-directive.html#Directive-Hook-Arguments
 type DirectiveBinding struct {
-	Value_ js.Value
+	// This js.Value slot has its own slot called "value", so its accessor
+	// (below) is called Value(), so the slot name can't also be Value, so call
+	// it Val.  Which could actually be surprising if you use
+	// DirectiveBinding.Value, because it'll *compile*, but it'll be a
+	// function value, not a string, so it'll likely panic.
+	Val js.Value
 }
 
-func (db *DirectiveBinding) Name() string        { return db.Value_.Get("name").String() }
-func (db *DirectiveBinding) Value() js.Value     { return db.Value_.Get("value") }
-func (db *DirectiveBinding) OldValue() js.Value  { return db.Value_.Get("oldValue") }
-func (db *DirectiveBinding) Expression() string  { return db.Value_.Get("expression").String() }
-func (db *DirectiveBinding) Arg() string         { return db.Value_.Get("arg").String() }
-func (db *DirectiveBinding) Modifiers() js.Value { return db.Value_.Get("modifiers") }
+func (db *DirectiveBinding) Name() string        { return db.Val.Get("name").String() }
+func (db *DirectiveBinding) Value() js.Value     { return db.Val.Get("value") }
+func (db *DirectiveBinding) OldValue() js.Value  { return db.Val.Get("oldValue") }
+func (db *DirectiveBinding) Expression() string  { return db.Val.Get("expression").String() }
+func (db *DirectiveBinding) Arg() string         { return db.Val.Get("arg").String() }
+func (db *DirectiveBinding) Modifiers() js.Value { return db.Val.Get("modifiers") }
 
 // NewDirective creates a new directive.  It wraps js{Vue.directive}.
 // https://vuejs.org/v2/api/#Vue-directive
@@ -33,7 +38,7 @@ func NewDirective(name string, opts ...DirectiveOption) *Directive {
 	c := &DirectiveConfig{Value: NewObject()}
 	c.Option(opts...)
 	if c.Short() != js.Undefined() {
-		return &Directive{Value: js.Global().Get("Vue").Call("directive", name, c.Short)}
+		return &Directive{Value: js.Global().Get("Vue").Call("directive", name, c.Short())}
 	}
 	return &Directive{Value: js.Global().Get("Vue").Call("directive", name, c.Value)}
 }
@@ -83,7 +88,7 @@ func makeDirectiveOption(name string, f func(el js.Value, binding *DirectiveBind
 		c.Set(name, NewCallback(
 			func(thisNotSet js.Value, jsArgs []js.Value) interface{} {
 				f(jsArgs[0],
-					&DirectiveBinding{Value_: jsArgs[1]},
+					&DirectiveBinding{Val: jsArgs[1]},
 					jsArgs[2])
 				return nil
 			}))
@@ -95,7 +100,7 @@ func makeDirectiveUpdateOption(name string, f func(el js.Value, binding *Directi
 		c.Set(name, NewCallback(
 			func(thisNotSet js.Value, jsArgs []js.Value) interface{} {
 				f(jsArgs[0],
-					&DirectiveBinding{Value_: jsArgs[1]},
+					&DirectiveBinding{Val: jsArgs[1]},
 					jsArgs[2],
 					jsArgs[3])
 				return nil
@@ -121,7 +126,7 @@ func Short(f func(el js.Value, binding *DirectiveBinding, vnode, oldVnode js.Val
 				}
 
 				f(jsArgs[0],
-					&DirectiveBinding{Value_: jsArgs[1]},
+					&DirectiveBinding{Val: jsArgs[1]},
 					jsArgs[2],
 					lastArg)
 				return nil

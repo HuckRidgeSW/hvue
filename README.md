@@ -26,8 +26,6 @@ git checkout --track origin/wasm
 
 ## Overview
 
-***Note: As of this writing, only examples 01-07 have been converted & tested to run under both GopherJS and go/wasm.***
-
 Generally speaking, the [examples](https://github.com/HuckRidgeSW/hvue/tree/master/examples)
 follow the examples in the Vue [guide](https://vuejs.org/v2/guide/).
 

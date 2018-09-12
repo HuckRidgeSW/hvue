@@ -10,10 +10,17 @@
 	<hr>
 
 	<div id="object-literals" v-demo2="{ color: 'white', text: 'hello!' }">
-		Check the console for this demo's output.
+	  Check the console for this demo's output.<br>
+	  It should be
+	  <pre>
+white
+hello!
+	  </pre>
 	</div>
 </body>
 
 <script src="/vendor/vue.js"></script>
-<script src="08-directives.js"></script>
+<script src="/examples/maybe_wasm.js"></script>
+<script src="/examples/wasm_start.js"></script>
+<script>wasm_start("08-directives")</script>
 </html>
