@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/gopherwasm/js"
 	"github.com/huckridgesw/hvue"
 )
 
@@ -19,6 +19,8 @@ func main() {
 	go pressAButton()
 	go twoWayBinding()
 	go composingWithComponents()
+
+	select {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +29,7 @@ func helloVue() {
 	app := hvue.NewVM(
 		hvue.El("#app"),
 		hvue.Data("message", "Hello, Vue!"))
-	js.Global.Set("app", app)
+	js.Global().Set("app", app.Value)
 	// In the JS console, try setting app.message to something else.
 }
 
@@ -37,7 +39,7 @@ func bindElementAttributes() {
 	app2 := hvue.NewVM(
 		hvue.El("#app-2"),
 		hvue.Data("message", "You loaded this page on "+time.Now().String()))
-	js.Global.Set("app2", app2)
+	js.Global().Set("app2", app2.Value)
 	// In the JS console, try setting app2.message to something else.
 }
 
@@ -47,39 +49,49 @@ func togglePresenceOfElement() {
 	app3 := hvue.NewVM(
 		hvue.El("#app-3"),
 		hvue.Data("seen", true))
-	js.Global.Set("app3", app3)
+	js.Global().Set("app3", app3.Value)
 	// In the JS console, try setting app3.seen to false.
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 func displayAList() {
+	data := hvue.NewArray()
+	for i, v := range []string{"Learn JavaScript", "Learn Vue", "Build something awesome"} {
+		data.SetIndex(i, map[string]interface{}{"Text": v})
+	}
+
 	app4 := hvue.NewVM(
 		hvue.El("#app-4"),
-		hvue.Data("todos", []struct{ Text string }{
-			{Text: "Learn JavaScript"},
-			{Text: "Learn Vue"},
-			{Text: "Build something awesome"}}))
-	js.Global.Set("app4", app4)
+		hvue.Data("todos", data))
+	js.Global().Set("app4", app4.Value)
 	// In the JS console, try app4.todos.push({ Text: 'New item' }).
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 type Data5 struct {
-	*js.Object
-	Message string `js:"message"`
+	js.Value
+
+	// Demonstrate hvue.NewVM setting a *hvue.VM field of a data object
+	*hvue.VM
+}
+
+func (d *Data5) Message() string       { return d.Get("message").String() }
+func (d *Data5) SetMessage(new string) { d.Value.Set("message", new) }
+
+func (d *Data5) ReverseMessage() {
+	hvue.Log("Data5.ReverseMessage: d.VM:", d.VM.Value)
+	d.SetMessage(reverse(d.Message()))
 }
 
 func pressAButton() {
+	d5 := &Data5{Value: hvue.NewObject()}
+	d5.SetMessage("Hello, Vue!")
 	hvue.NewVM(
 		hvue.El("#app-5"),
-		hvue.DataS(hvue.NewT(&Data5{Message: "Hello, Vue!"})),
-		hvue.MethodsOf(&Data5{}))
-}
-
-func (d *Data5) ReverseMessage() {
-	d.Message = reverse(d.Message)
+		hvue.DataS(d5, d5.Value),
+		hvue.MethodsOf(&Data5{})) // FIXME: Could &Data5{} be d5?
 }
 
 func reverse(s string) string {
@@ -100,55 +112,34 @@ func twoWayBinding() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-type Data7 struct {
-	*js.Object
-	GroceryList []*ListItem7 `js:"groceryList"`
-}
-
-type ListItem7 struct {
-	*js.Object
-	Text string `js:"text"`
-}
+type Data7 struct{ js.Value }
+type ListItem7 struct{ js.Value }
 
 func composingWithComponents() {
 	hvue.NewComponent("todo-item",
 		hvue.Props("todo"),
 		hvue.Template("<li>{{ todo.text }}</li>"))
 
-	// This compiles and runs but wouldn't actually work in practice.  It'd be
-	// nice to write a function that could take this and copy it into a new
-	// structure with all the *js.Object slots initialized correctly.
-	testData := &Data7{
-		GroceryList: []*ListItem7{
-			&ListItem7{Text: "stuff"},
-		},
-	}
-	println("testData is", testData)
+	d7 := NewData7(
+		"Vegetables",
+		"Cheese",
+		"Whatever else humans are supposed to eat")
 
-	hvue.NewVM(
+	app7 := hvue.NewVM(
 		hvue.El("#app-7"),
-		hvue.DataS(NewData(
-			"Vegetables",
-			"Cheese",
-			"Whatever else humans are supposed to eat")))
+		hvue.DataS(d7, d7.Value))
+	js.Global().Set("app7", app7.Value)
+	// In the JS console, try app7.groceryList.push({text: "a new item"})
 }
 
-func NewData(texts ...string) *Data7 {
-	d := &Data7{Object: hvue.NewObject()}
-	d.GroceryList = NewGroceryList(texts)
-	return d
-}
-
-func NewGroceryList(texts []string) []*ListItem7 {
-	list := make([]*ListItem7, len(texts))
-	for i, text := range texts {
-		list[i] = NewListItem(text)
+func NewData7(texts ...string) *Data7 {
+	d := &Data7{Value: hvue.NewObject()}
+	d.Set("groceryList", hvue.NewArray())
+	gl := d.Get("groceryList")
+	for i, v := range texts {
+		o := hvue.NewObject()
+		o.Set("text", v)
+		gl.SetIndex(i, o)
 	}
-	return list
-}
-
-func NewListItem(Text string) *ListItem7 {
-	item := &ListItem7{Object: js.Global.Get("Object").New()}
-	item.Text = Text
-	return item
+	return d
 }

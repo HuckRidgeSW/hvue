@@ -6,11 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/gopherwasm/js"
 	"github.com/huckridgesw/hvue"
 )
-
-var O = func() *js.Object { return js.Global.Get("Object").New() }
 
 // Several examples in one, from
 // https://vuejs.org/v2/guide/components.html
@@ -25,6 +23,8 @@ func main() {
 	go counterEventWithChannel()
 	go currencyInput()
 	go moreRobustCurrencyInput()
+
+	select {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,22 +49,25 @@ func localRegistration() {
 
 func dataMustBeAFunction() {
 	type DataT struct {
-		*js.Object
-		counter int `js:"counter"`
+		js.Value
 	}
 
 	// How NOT to do it: Since all three component instances share the same
-	// data object, incrementing one counter increments them all! Ouch.
-	data := hvue.NewT(&DataT{counter: 0}).(*DataT)
+	// data object, incrementing one counter increments them all!  Ouch.
+	data := hvue.Map2Obj(hvue.M{"counter": 0})
 	hvue.NewComponent(
 		"simple-counter1",
 		hvue.Template(`<button v-on:click="counter += 1">{{ counter }}</button>`),
 		// Return the same object reference for each component instance.  This
 		// is an example of how NOT to do data in components.  See the Vue
 		// example.
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			return data
-		}))
+		//
+		// Have to use a custom ComponentOption function, because hvue.DataFunc
+		// actually makes it impossible to not return a new object each time.
+		func(c *hvue.Config) {
+			c.DataType = js.TypeFunction
+			c.Set("data", js.Global().Call("wasm_return_thing", data))
+		})
 	hvue.NewVM(hvue.El("#example-2-a"))
 
 	// Let’s fix this by instead returning a fresh data object:
@@ -72,11 +75,10 @@ func dataMustBeAFunction() {
 		"simple-counter2",
 		hvue.Template(`<button v-on:click="counter += 1">{{ counter }}</button>`),
 		// Return a different object for each component
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			// You *can* do the type-assert to its actual type, but you don't
-			// *have* to.
-			return hvue.NewT(&DataT{counter: 0}).(*DataT)
-		}))
+		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
+			o.Set("counter", 0)
+			return &DataT{Value: o}
+		}, "counter"))
 	hvue.NewVM(hvue.El("#example-2-b"))
 }
 
@@ -117,11 +119,9 @@ func propValidation() {
 			hvue.Default(100)),
 		hvue.PropObj("propE",
 			hvue.Types(hvue.PObject),
-			hvue.DefaultFunc(func(*hvue.VM) interface{} {
-				return js.M{"message": "hello"}
-			})),
+			hvue.DefaultFunc(hvue.Map2Obj(hvue.M{"message": "hello"}))),
 		hvue.PropObj("propF",
-			hvue.Validator(func(vm *hvue.VM, value *js.Object) interface{} {
+			hvue.Validator(func(vm *hvue.VM, value js.Value) interface{} {
 				return value.Int() > 10
 			})),
 	)
@@ -133,36 +133,42 @@ func propValidation() {
 // https://vuejs.org/v2/guide/components.html#Using-v-on-with-Custom-Events
 
 type ButtonCounterT struct {
-	*js.Object
-	Counter int `js:"counter"`
+	js.Value
 }
 
+func (b *ButtonCounterT) SetCounter(new int) { b.Set("counter", new) }
+
 type CounterEventT struct {
-	*js.Object
-	Total int `js:"total"`
+	js.Value
 }
+
+func (b *CounterEventT) Total() int       { return b.Get("total").Int() }
+func (b *CounterEventT) SetTotal(new int) { b.Set("total", new) }
 
 func counterEvent() {
 	hvue.NewComponent("button-counter",
 		hvue.Template(`<button v-on:click="Increment">{{ counter }}</button>`),
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			return hvue.NewT(&ButtonCounterT{Counter: 0})
-		}),
+		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
+			data := &ButtonCounterT{Value: o}
+			data.SetCounter(0)
+			return data
+		}, "counter"),
 		hvue.MethodsOf(&ButtonCounterT{}))
+	data2 := &CounterEventT{Value: hvue.Map2Obj(hvue.M{"total": 0})}
 	hvue.NewVM(
 		hvue.El("#counter-event-example"),
-		hvue.DataS(hvue.NewT(&CounterEventT{Total: 0})),
+		hvue.DataS(data2, data2.Value),
 		hvue.MethodsOf(&CounterEventT{}))
 }
 
 func (o *ButtonCounterT) Increment(vm *hvue.VM) {
-	o.Counter++
+	o.Set("counter", o.Get("counter").Int()+1)
 	vm.Emit("increment")
 
 }
 
 func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
-	o.Total++
+	o.SetTotal(o.Total() + 1)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -175,34 +181,32 @@ func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
 // Vue event model, badly.
 
 type ButtonCounterWithChannelT struct {
-	*js.Object
-	Counter int `js:"counter"`
+	js.Value
 	eventCh chan string
 }
 
-// Reused from above
-// type CounterEventT struct {
-// 	*js.Object
-// 	Total int `js:"total"`
-// }
+func (b *ButtonCounterWithChannelT) Counter() int       { return b.Get("counter").Int() }
+func (b *ButtonCounterWithChannelT) SetCounter(new int) { b.Set("counter", new) }
 
 func counterEventWithChannel() {
 	eventCh := make(chan string)
 	hvue.NewComponent("button-counter-with-channel",
 		hvue.Template(`<button v-on:click="Increment">{{ counter }}</button>`),
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			return hvue.NewT(&ButtonCounterWithChannelT{
-				Counter: 0,
+		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
+			data := &ButtonCounterWithChannelT{
+				Value:   o,
 				eventCh: eventCh,
-			})
-		}),
+			}
+			data.SetCounter(0)
+			return data
+		}, "counter"),
 		hvue.MethodsOf(&ButtonCounterWithChannelT{}))
 
-	data := hvue.NewT(&CounterEventT{Total: 0}).(*CounterEventT)
+	data := &CounterEventT{Value: hvue.Map2Obj(hvue.M{"total": 0})}
 	vm := hvue.NewVM(
 		hvue.El("#counter-event-example-with-channel"),
-		hvue.DataS(data),
-		hvue.MethodsOf(&CounterEventT{}))
+		hvue.DataS(data, data.Value),
+		hvue.MethodsOf(data))
 
 	go func() {
 		for event := range eventCh {
@@ -215,24 +219,22 @@ func counterEventWithChannel() {
 }
 
 func (o *ButtonCounterWithChannelT) Increment(vm *hvue.VM) {
-	o.Counter++
+	o.SetCounter(o.Counter() + 1)
 	o.eventCh <- "increment"
-
 }
 
-// Reused from above
-// func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
-// 	o.Total++
-// }
+// CounterEventT and its method IncrementTotal reused from above.
 
 ////////////////////////////////////////////////////////////////////////////////
 
 // https://vuejs.org/v2/guide/components.html#Form-Input-Components-using-Custom-Events
 
 type CurrencyData struct {
-	*js.Object
-	Price string `js:"price"`
+	js.Value
 }
+
+func (c *CurrencyData) Price() string       { return c.Get("price").String() }
+func (c *CurrencyData) SetPrice(new string) { c.Set("price", new) }
 
 func currencyInput() {
 	hvue.NewComponent("currency-input",
@@ -246,9 +248,11 @@ func currencyInput() {
 		</span>
 		`),
 		hvue.Props("value"),
-		hvue.DataFunc(func(*hvue.VM) interface{} {
-			return hvue.NewT(&CurrencyData{})
-		}),
+		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
+			data := &CurrencyData{Value: o}
+			data.SetPrice("0")
+			return data
+		}, "price"),
 
 		// Show two ways of adding the UpdateValue method:
 
@@ -267,12 +271,13 @@ func currencyInput() {
 			if formattedValue != value {
 				vm.Refs("input").Set("value", formattedValue)
 			}
-			vm.Emit("input", js.Global.Get("Number").Invoke(formattedValue))
+			vm.Emit("input", js.Global().Get("Number").Invoke(formattedValue))
 		}),
 	)
+	data := &CurrencyData{Value: hvue.Map2Obj(hvue.M{"price": ""})}
 	hvue.NewVM(
 		hvue.El("#currency-input-example"),
-		hvue.DataS(hvue.NewT(&CurrencyData{Price: ""})))
+		hvue.DataS(data, data.Value))
 }
 
 // Instead of updating the value directly, this
@@ -287,7 +292,7 @@ func (_ *CurrencyData) UpdateValue(vm *hvue.VM, value string) {
 	if formattedValue != value {
 		vm.Refs("input").Set("value", formattedValue)
 	}
-	vm.Emit("input", js.Global.Get("Number").Invoke(formattedValue))
+	vm.Emit("input", js.Global().Get("Number").Invoke(formattedValue))
 }
 
 func dotPlus3(value string) int {
@@ -300,19 +305,20 @@ func dotPlus3(value string) int {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// here’s a more robust currency filter"
+// Here’s a more robust currency filter
 // Still from https://vuejs.org/v2/guide/components.html#Form-Input-Components-using-Custom-Events
 
 type CurrencyInputT struct {
-	*js.Object
-	Price    float64 `js:"price"`
-	Shipping float64 `js:"shipping"`
-	Handling float64 `js:"handling"`
-	Discount float64 `js:"discount"`
+	js.Value
 }
 
-func moreRobustCurrencyInput() {
+func (c *CurrencyInputT) Price() float64      { return c.Get("price").Float() }
+func (c *CurrencyInputT) Shipping() float64   { return c.Get("shipping").Float() }
+func (c *CurrencyInputT) Handling() float64   { return c.Get("handling").Float() }
+func (c *CurrencyInputT) Discount() float64   { return c.Get("discount").Float() }
+func (c *CurrencyInputT) SetTotal(new string) { c.Set("total", new) }
 
+func moreRobustCurrencyInput() {
 	hvue.NewComponent("currency-input2",
 		hvue.Template(`
         <div>
@@ -339,27 +345,34 @@ func moreRobustCurrencyInput() {
 		}),
 		hvue.MethodsOf(&CurrencyInputT{}))
 
+	data := &CurrencyInputT{
+		Value: hvue.Map2Obj(hvue.M{
+			"price":    0,
+			"shipping": 0,
+			"handling": 0,
+			"discount": 0,
+			"total":    "",
+		})}
+	watch := func(vm *hvue.VM) {
+		data.SetTotal(strconv.FormatFloat((data.Price()*100+
+			data.Shipping()*100+
+			data.Handling()*100-
+			data.Discount()*100)/100, 'f', 2, 32))
+	}
 	hvue.NewVM(
 		hvue.El("#app"),
-		hvue.DataS(hvue.NewT(&CurrencyInputT{
-			Price:    0,
-			Shipping: 0,
-			Handling: 0,
-			Discount: 0,
-		})),
-		hvue.Computed("total", func(vm *hvue.VM) interface{} {
-			data := vm.GetData().(*CurrencyInputT)
-			return strconv.FormatFloat((data.Price*100+
-				data.Shipping*100+
-				data.Handling*100-
-				data.Discount*100)/100, 'f', 2, 32)
-		}))
+		hvue.DataS(data, data.Value),
+		hvue.Watch("price", watch),
+		hvue.Watch("shipping", watch),
+		hvue.Watch("handling", watch),
+		hvue.Watch("discount", watch),
+	)
 }
 
-func (c *CurrencyInputT) UpdateValue(vm *hvue.VM, value *js.Object) {
-	result := js.Global.Get("currencyValidator").
+func (c *CurrencyInputT) UpdateValue(vm *hvue.VM, value js.Value) {
+	result := js.Global().Get("currencyValidator").
 		Call("parse", value, vm.Get("value"))
-	if result.Get("warning") != js.Undefined {
+	if result.Get("warning") != js.Undefined() {
 		vm.Refs("input").Set("value", result.Get("value"))
 	}
 	vm.Emit("input", result.Get("value"))
@@ -367,11 +380,9 @@ func (c *CurrencyInputT) UpdateValue(vm *hvue.VM, value *js.Object) {
 
 func (c *CurrencyInputT) FormatValue(vm *hvue.VM) {
 	vm.Refs("input").Set("value",
-		js.Global.Get("currencyValidator").Call("format", vm.Get("value")))
+		js.Global().Get("currencyValidator").Call("format", vm.Get("value")))
 }
 
 func (c *CurrencyInputT) SelectAll(vm *hvue.VM, event *hvue.Event) {
-	js.Global.Call("setTimeout", func() {
-		event.Get("target").Call("select")
-	})
+	event.Target().Select()
 }

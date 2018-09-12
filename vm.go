@@ -3,34 +3,33 @@ package hvue
 import (
 	"reflect"
 
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/gopherjs/gopherwasm/js"
 )
-
-var o = func() *js.Object { return js.Global.Get("Object").New() }
 
 // VM wraps a js Vue object.
 type VM struct {
-	*js.Object
-	Data  *js.Object `js:"$data"`
-	Props *js.Object `js:"$props"`
-	El    *js.Object `js:"$el"`
-
-	// Several of these should probably be functions, like Refs already is.
-	Options     *js.Object   `js:"$options"`
-	Parent      *js.Object   `js:"$parent"`
-	Root        *js.Object   `js:"$root"`
-	Children    []*js.Object `js:"$children"`
-	Slots       *js.Object   `js:"$slots"`
-	ScopedSlots *js.Object   `js:"$scopedSlots"`
-	IsServer    bool         `js:"$isServer"`
-
-	// Note existence of fields with setter methods, which won't show up in
-	// $data.
-	Setters *js.Object `js:"hvue_setters"`
+	js.Value
 }
 
+func (vm *VM) Data() js.Value    { return vm.Get("$data") }
+func (vm *VM) Props() js.Value   { return vm.Get("$props") }
+func (vm *VM) El() js.Value      { return vm.Get("$el") }
+func (vm *VM) Options() js.Value { return vm.Get("$options") }
+func (vm *VM) Parent() js.Value  { return vm.Get("$parent") }
+func (vm *VM) Root() js.Value    { return vm.Get("$root") }
+
+// func (vm *VM) Children() []js.Value    { return vm.Get("$children") } // not sure about this one
+func (vm *VM) Slots() js.Value       { return vm.Get("$slots") }
+func (vm *VM) ScopedSlots() js.Value { return vm.Get("$scopedSlots") }
+func (vm *VM) IsServer() bool        { return vm.Get("$isServer").Bool() }
+
+// Note existence of fields with setter methods, which won't show up in $data.
+func (vm *VM) Setters() js.Value { return vm.Get("hvue_setters") }
+
+func (vm *VM) SetSetters(new js.Value) { vm.Value.Set("hvue_setters", new) }
+
 var (
-	jsOType     = reflect.TypeOf(o())
+	jsOType     = reflect.TypeOf(NewObject())
 	vmType      = reflect.TypeOf(&VM{})
 	dataObjects = map[int]interface{}{}
 	nextDataID  = 1
@@ -44,54 +43,49 @@ var (
 // If you use a data object (via DataS) and it has a VM field, it's set to
 // this new VM.  TODO: Verify that the VM field is of type *hvue.VM.
 func NewVM(opts ...ComponentOption) *VM {
-	c := &Config{Object: NewObject()}
-	c.Setters = NewObject()
+	c := &Config{Value: NewObject()}
+	c.SetSetters(NewObject())
 	c.Option(opts...)
-	vm := &VM{Object: js.Global.Get("Vue").New(c)}
+	vm := &VM{Value: js.Global().Get("Vue").New(c.Value)}
 	if c.dataValue.IsValid() {
 		if vmField := c.dataValue.FieldByName("VM"); vmField.IsValid() {
 			vmField.Set(reflect.ValueOf(vm))
 		}
 	}
-	vm.Setters = c.Setters
+	vm.SetSetters(c.Setters())
 	return vm
 }
 
 // El sets the vm's el slot.
 func El(selector string) ComponentOption {
 	return func(c *Config) {
-		c.El = selector
+		c.SetEl(selector)
 	}
 }
 
 // Data sets a single data field.  Data can be called multiple times for the
 // same vm.
 //
-// FIXME: You can't use MethodsOf with this function.
+// Note that you can't use MethodsOf with this function.
 func Data(name string, value interface{}) ComponentOption {
 	return func(c *Config) {
-		if c.Data == js.Undefined {
-			c.Data = NewObject()
+		if c.Data() == js.Undefined() {
+			c.SetData(NewObject())
 		}
-		c.Data.Set(name, value)
+		c.Data().Set(name, value)
 	}
 }
 
-// DataS sets the struct `value` as the entire contents of the vm's data
-// field.  `value` should be a pointer to the struct.  If the object has a VM
-// field, NewVM sets it to the new VM object.
-func DataS(value interface{}) ComponentOption {
+// DataS sets the object `goValue` as the entire contents of the vm's data
+// field.  If the object has a VM field, NewVM sets it to the new VM object.
+func DataS(goValue interface{}, jsValue js.Value) ComponentOption {
 	return func(c *Config) {
-		if c.Data != js.Undefined {
+		if c.Data() != js.Undefined() {
 			panic("Cannot use hvue.DataS together with any other Data* options")
 		}
-		// Can't say `c.Data = value` because c.Data is a *js.Object, and value
-		// is an interface{}.  Its underlying type must be a pointer to a
-		// js-special struct, but we can't get at that struct's Object field
-		// without a bunch of reflection, so take this shortcut.
-		c.Object.Set("data", value)
-		c.dataValue = reflect.ValueOf(value).Elem()
-		storeDataID(c.Object.Get("data"), value, c)
+		c.SetData(jsValue)
+		c.dataValue = reflect.ValueOf(goValue).Elem()
+		storeDataID(jsValue, goValue, c)
 	}
 }
 
@@ -102,38 +96,23 @@ func DataS(value interface{}) ComponentOption {
 // (https://vuejs.org/v2/api/#created), not when you call "NewVM".  This means
 // that you can't, for example, get clever and try to use the same object here
 // as with MethodsOf.  MethodsOf requires an object when you call NewVM to
-// reguster the VM, long before the VM is actually created or bound; this is
+// register the VM, long before the VM is actually created or bound; this is
 // called every time a new VM or component is created.
-func DataFunc(f func(*VM) interface{}) ComponentOption {
+func DataFunc(f DataFuncT, fieldNames ...string) ComponentOption {
 	return func(c *Config) {
-		if c.Data != js.Undefined {
-			panic("Cannot use hvue.DataFunc together with any other Data* options")
+		if c.Data() != js.Undefined() {
+			panic("Cannot use hvue.DataFunc together with any other Data/DataS options")
 		}
-		// See comment about c.Data in DataS().
-		c.Object.Set("data", jsCallWithVM(func(vm *VM) interface{} {
-			// Get the new data object
-			value := f(vm)
-
-			// Find the *js.Object in field 0, however deep.
-			// FIXME: If the types are wrong at any point (not pointer to a
-			// struct at each level), then this'll fail with a
-			// probably-not-very-clear error message.
-			i := reflect.ValueOf(value).Elem().Field(0)
-			for i.Type() != jsOType {
-				i = i.Elem().Field(0)
-			}
-			storeDataID(i.Interface().(*js.Object), value, c)
-			return value
-		}))
+		c.SetDataFunc(f, fieldNames...)
 	}
 }
 
 // Store a data object ID in the data object, for later reference.
 //
-// This wouldn't work if the *js.Object is sealed or not "plain" (like
+// This wouldn't work if the js.Value is sealed or not "plain" (like
 // WebSocket).  But on the other hand, Vue won't work with non-plain or sealed
 // objects, so it doesn't matter.
-func storeDataID(o *js.Object, value interface{}, c *Config) {
+func storeDataID(o js.Value, value interface{}, c *Config) {
 	curID := nextDataID // small race condition here
 	nextDataID++
 	o.Set("hvue_dataID", curID)
@@ -152,15 +131,15 @@ func storeDataID(o *js.Object, value interface{}, c *Config) {
 // the method set of the data object, if any.
 func Method(name string, f interface{}) ComponentOption {
 	return func(c *Config) {
-		if c.Methods == js.Undefined {
-			c.Methods = NewObject()
+		if c.Methods() == js.Undefined() {
+			c.SetMethods(NewObject())
 		}
 		m := reflect.ValueOf(f)
 		if m.Kind() != reflect.Func {
 			panic("Method " + name + " is not a func")
 		}
 
-		c.Methods.Set(name,
+		c.Methods().Set(name,
 			makeMethod(name, false, m.Type(), m))
 	}
 }
@@ -175,8 +154,8 @@ func Method(name string, f interface{}) ComponentOption {
 // You can't use MethodsOf with Data(), only with DataS or DataFunc().
 func MethodsOf(t interface{}) ComponentOption {
 	return func(c *Config) {
-		if c.Methods == js.Undefined {
-			c.Methods = NewObject()
+		if c.Methods() == js.Undefined() {
+			c.SetMethods(NewObject())
 		}
 		typ := reflect.TypeOf(t)
 		if typ.Kind() != reflect.Ptr ||
@@ -187,15 +166,15 @@ func MethodsOf(t interface{}) ComponentOption {
 		// Loop through all methods of the type
 		for i := 0; i < typ.NumMethod(); i++ {
 			m := typ.Method(i)
-			c.Methods.Set(m.Name,
+			c.Methods().Set(m.Name,
 				makeMethod(m.Name, true, m.Type, m.Func))
 		}
 	}
 }
 
-func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value) *js.Object {
-	return js.MakeFunc(
-		func(this *js.Object, jsArgs []*js.Object) interface{} {
+func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value) js.Value {
+	return NewCallback(
+		func(this js.Value, jsArgs []js.Value) interface{} {
 			// Construct the arglist
 			numIn := mType.NumIn()
 			goArgs := make([]reflect.Value, numIn)
@@ -226,43 +205,45 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 				if goArg >= numIn {
 					break
 				}
-				switch mType.In(goArg).Kind() {
-				case reflect.Ptr:
-					inPtrType := mType.In(goArg)
-					switch inPtrType {
-					case jsOType:
-						// A *js.Object
-						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg])
-					case vmType:
-						// A *VM
-						if vmDone {
-							panic("Only a single *hvue.VM arg expected per method: " + name)
-						}
-						goArgs[goArg] = reflect.ValueOf(&VM{Object: this})
-						jsArg--
-						vmDone = true
-					default:
-						// Expects a pointer to a struct with first field
-						// of type *js.Object.  Doesn't work yet with nested
-						// structs.
-						inType := inPtrType.Elem()
-						inArg := reflect.New(inType)
-						inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[jsArg]))
-						goArgs[goArg] = inArg
-					}
-				case reflect.String:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].String())
-				case reflect.Bool:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Bool())
-				case reflect.Float64:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Float())
-				case reflect.Int32, reflect.Int:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Int())
-				case reflect.Int64:
-					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Int64())
+
+				switch mType.In(goArg) {
+				case jsOType:
+					// A js.Value
+					goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg])
 				default:
-					panic("Unknown type in arglist for " +
-						name + ": " + mType.In(goArg).Kind().String())
+					switch mType.In(goArg).Kind() {
+					case reflect.Ptr:
+						inPtrType := mType.In(goArg)
+						switch inPtrType {
+						case vmType:
+							// A *VM
+							if vmDone {
+								panic("Only a single *hvue.VM arg expected per method: " + name)
+							}
+							goArgs[goArg] = reflect.ValueOf(&VM{Value: this})
+							jsArg--
+							vmDone = true
+						default:
+							// Expects a pointer to a struct with first field
+							// of type js.Value.  Doesn't work yet with nested
+							// structs.
+							inType := inPtrType.Elem()
+							inArg := reflect.New(inType)
+							inArg.Elem().Field(0).Set(reflect.ValueOf(jsArgs[jsArg]))
+							goArgs[goArg] = inArg
+						}
+					case reflect.String:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].String())
+					case reflect.Bool:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Bool())
+					case reflect.Float64:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Float())
+					case reflect.Int64, reflect.Int32, reflect.Int:
+						goArgs[goArg] = reflect.ValueOf(jsArgs[jsArg].Int())
+					default:
+						panic("hvue.makeMethod: Unknown type in arglist for " +
+							name + ": " + mType.In(goArg).Kind().String())
+					}
 				}
 			}
 
@@ -277,20 +258,36 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 		})
 }
 
-// untested
-func Filter(name string, f func(vm *VM, value *js.Object, args ...*js.Object) interface{}) ComponentOption {
+func Watch(name string, f func(*VM)) ComponentOption {
 	return func(c *Config) {
-		if c.Filters == js.Undefined {
-			c.Filters = o()
+		if c.Watchers() == js.Undefined() {
+			c.SetWatchers(NewObject())
 		}
 
-		c.Filters.Set(name, js.MakeFunc(
-			func(this *js.Object, args []*js.Object) interface{} {
-				vm := &VM{Object: this}
-				return f(vm, args[0], args[1:]...)
+		c.Watchers().Set(
+			name,
+			jsCallWithVM(func(vm *VM) interface{} {
+				f(vm)
+				return nil
 			}))
 	}
 }
+
+// FIXME: A filter function needs to be able to return a value, which Go
+// functions can't yet.  So comment this out for now.
+// func Filter(name string, f func(vm *VM, value js.Value, args ...js.Value) interface{}) ComponentOption {
+// 	return func(c *Config) {
+// 		if c.Filters() == js.Undefined() {
+// 			c.SetFilters(NewObject())
+// 		}
+//
+// 		c.Filters().Set(name, js.NewCallback(
+// 			func(args []js.Value) interface{} {
+// 				vm := &VM{Value: args[0]}
+// 				return f(vm, args[0], args[1:]...)
+// 			}))
+// 	}
+// }
 
 // Emit emits an event.  It wraps js{vm.$emit}:
 // https://vuejs.org/v2/api/#vm-emit.
@@ -301,7 +298,7 @@ func (vm *VM) Emit(event string, args ...interface{}) {
 
 // Refs returns the ref for name.  vm.Refs("foo") compiles to
 // js{vm.$refs.foo}.  It wraps vm.$refs: https://vuejs.org/v2/api/#vm-refs.
-func (vm *VM) Refs(name string) *js.Object {
+func (vm *VM) Refs(name string) js.Value {
 	return vm.Get("$refs").Get(name)
 }
 
@@ -309,7 +306,7 @@ func (vm *VM) Refs(name string) *js.Object {
 // assert its return value to data type you passed to DataS(), or returned
 // from the function given to DataFunc().
 func (vm *VM) GetData() interface{} {
-	dataID := vm.Data.Get("hvue_dataID").Int()
+	dataID := vm.Data().Get("hvue_dataID").Int()
 	if dataID == 0 {
 		// FIXME: A better error here would be great, Mmmkay?
 		panic("Unknown dataID in GetData")
@@ -321,14 +318,29 @@ func (vm *VM) GetData() interface{} {
 	return dataObj
 }
 
-// Set wraps vm.Object.Set(), but checks to make sure the given field is a
+// Set wraps vm.Value.Set(), but checks to make sure the given field is a
 // valid slot in the VM's data object (including computed setters), and panics
-// otherwise.  (If you don't want this check, then use vm.Object.Set()
+// otherwise.  (If you don't want this check, then use vm.Value.Set()
 // directly.)
 func (vm *VM) Set(key string, value interface{}) {
-	if vm.Object.Get("$data").Get(key) == js.Undefined &&
-		vm.Setters.Get(key) == js.Undefined {
+	if vm.Data().Get(key) == js.Undefined() &&
+		vm.Setters().Get(key) == js.Undefined() {
 		panic("Unknown data slot set: " + key)
 	}
-	vm.Object.Set(key, value)
+	vm.Value.Set(key, value)
+}
+
+// Modeled on GopherJS's js.M, also a map[string]interface{}
+type M map[string]interface{}
+
+func Map2Obj(m M) js.Value {
+	res := NewObject()
+	for k, v := range m {
+		if m, ok := v.(M); ok {
+			res.Set(k, Map2Obj(m))
+		} else {
+			res.Set(k, v)
+		}
+	}
+	return res
 }
