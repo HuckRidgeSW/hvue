@@ -99,11 +99,11 @@ func makeDirectiveOption(name string, f func(el js.Value, binding *DirectiveBind
 func makeDirectiveUpdateOption(name string, f func(el js.Value, binding *DirectiveBinding, vnode, oldVnode js.Value)) DirectiveOption {
 	return func(c *DirectiveConfig) {
 		c.Set(name, js.NewCallback(
-			func(thisNotSet js.Value, jsArgs []js.Value) interface{} {
-				f(jsArgs[0],
-					&DirectiveBinding{Val: jsArgs[1]},
-					jsArgs[2],
-					jsArgs[3])
+			func(thisNotSet js.Value, args []js.Value) interface{} {
+				f(args[0],
+					&DirectiveBinding{Val: args[1]},
+					args[2],
+					args[3])
 				return nil
 			}))
 	}
@@ -117,14 +117,14 @@ func makeDirectiveUpdateOption(name string, f func(el js.Value, binding *Directi
 func Short(f func(el js.Value, binding *DirectiveBinding, vnode, oldVnode js.Value)) DirectiveOption {
 	return func(c *DirectiveConfig) {
 		c.SetShort(js.NewCallback(
-			func(thisNotSet js.Value, jsArgs []js.Value) interface{} {
+			func(thisNotSet js.Value, args []js.Value) interface{} {
 				var lastArg js.Value
-				if len(jsArgs) == 4 {
-					lastArg = jsArgs[3]
+				if len(args) == 4 {
+					lastArg = args[3]
 				}
-				f(jsArgs[0],
-					&DirectiveBinding{Val: jsArgs[1]},
-					jsArgs[2],
+				f(args[0],
+					&DirectiveBinding{Val: args[1]},
+					args[2],
 					lastArg)
 				return nil
 			}))

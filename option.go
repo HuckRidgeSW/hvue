@@ -39,7 +39,7 @@ func (c *Config) SetData(new js.Value) {
 }
 
 // The type of function passed to SetDataFunc, to initialize the fields for a
-// new data object in a Vue component.
+// new data object in a Vue component.  Return a Go object.  See example 7.
 type DataFuncT func(vm *VM, o js.Value) interface{}
 
 func (c *Config) SetDataFunc(newF DataFuncT) {
@@ -52,30 +52,6 @@ func (c *Config) SetDataFunc(newF DataFuncT) {
 		return templateObj
 	}))
 	c.DataType = js.TypeFunction
-	return
-
-	// templateObj := NewObject()
-	// for _, v := range fieldNames {
-	// 	templateObj.Set(v, "")
-	// }
-	// // data needs to be a real JS function that returns a real JS value.
-	// // wasm_new_data_func returns such a function; said function also calls the
-	// // newF callback to initialize the data slots at a later time.
-	// cb := js.Global().Call("wasm_new_data_func",
-	// 	templateObj,
-	// 	js.NewCallback(func(this js.Value, args []js.Value) interface{} {
-	// 		println("setdatafunc cb")
-	// 		// Initialize the new data object; get a Go object back.
-	// 		value := newF(&VM{Value: args[0]}, args[1])
-	// 		storeDataID(args[1], value, c)
-	// 		println("setdatafunc cb 2")
-
-	// 		// FIXME: This should be able to return a value
-	// 		return value
-	// 	}))
-	// c.Set("data", cb)
-	// c.DataType = js.TypeFunction
-	// println("setdatafunc done")
 }
 
 func (c *Config) SetProps(new js.Value)      { c.Set("props", new) }

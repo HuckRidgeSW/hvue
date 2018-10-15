@@ -13,18 +13,11 @@ func NewComponent(name string, opts ...ComponentOption) {
 	c.Option(opts...)
 
 	if c.DataType == js.TypeUndefined {
-		// wasm_new_data_func takes care of the hvue_dataID magic.
-		// c.Set("data",
-		// 	js.Global().Call("wasm_new_data_func",
-		// 		NewObject(), // call wasm_new_data_func with a blank template
-		// 		js.NewCallback(func([]js.Value) {}),
-		// 	))
-
 		c.Set("data",
 			js.NewCallback(func(this js.Value, _ []js.Value) interface{} {
 				newO := NewObject()
-				dataID := this.Get("$parent").Get("$data").Get("hvue_dataID")
-				if dataID != js.Undefined() {
+				dataID, err := GetDeep(this, "$parent", "$data", "hvue_dataID")
+				if err == nil {
 					newO.Set("hvue_dataID", dataID.Int())
 				}
 				return newO

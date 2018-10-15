@@ -94,6 +94,9 @@ func DataS(goValue interface{}, jsValue js.Value) ComponentOption {
 // DataFunc defines a function that returns a new data object.  You have to
 // use DataFunc with Components, not Data or DataS.
 //
+// If you use DataFunc and MethodsOf together, the type of the object returned
+// by DataFunc should match the type of the object given to MethodsOf.
+//
 // Note that this function is called when the VM or component is created
 // (https://vuejs.org/v2/api/#created), not when you call "NewVM".  This means
 // that you can't, for example, get clever and try to use the same object here

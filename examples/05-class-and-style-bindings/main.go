@@ -88,7 +88,7 @@ func bind_to_a_computed_property() {
 		hvue.DataS(data3, data3.Value),
 		hvue.Computed(
 			"classObject",
-			func(vm *hvue.VM) interface{} {
+			func(*hvue.VM) interface{} {
 				co := &ClassObject{Value: hvue.NewObject()}
 				co.Active = data3.IsActive && data3.Error.Value == nil
 				co.TextDanger = data3.Error.Value != nil &&

@@ -2,6 +2,7 @@ package hvue
 
 import (
 	// "github.com/gopherjs/gopherwasm/js"
+	"fmt"
 	"syscall/js"
 )
 
@@ -35,15 +36,17 @@ func jsCallWithVM(f func(*VM) interface{}) js.Callback {
 		})
 }
 
-func NewCallback(f func(this js.Value, args []js.Value) interface{}) js.Callback {
-	return js.NewCallback(f)
-	// return js.Global().Call("wasm_call_with_this",
-	// 	js.NewCallback(func(this js.Value, args []js.Value) interface{} {
-	// 		println("NewCallback ...")
-	// 		return f(this, args)
-	// 	}))
-}
-
 func Log(args ...interface{}) {
 	js.Global().Get("console").Call("log", args...)
+}
+
+func GetDeep(o js.Value, fields ...string) (js.Value, error) {
+	for _, field := range fields {
+		new := o.Get(field)
+		if new == js.Undefined() {
+			return js.Value{}, fmt.Errorf("GetDeep: Empty field %s", field)
+		}
+		o = new
+	}
+	return o, nil
 }

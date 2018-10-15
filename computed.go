@@ -16,7 +16,6 @@ import (
 //
 // Use a watcher instead.
 func Computed(name string, f func(vm *VM) interface{}) ComponentOption {
-	// panic("Computed not supported")
 	return func(c *Config) {
 		if c.Computed() == js.Undefined() {
 			c.SetComputed(NewObject())
@@ -37,8 +36,6 @@ func Computed(name string, f func(vm *VM) interface{}) ComponentOption {
 //
 // Use a watcher instead.
 func ComputedWithGetSet(name string, get func(vm *VM) interface{}, set func(vm *VM, newValue js.Value)) ComponentOption {
-	// panic("ComputedWithGetSet not supported")
-	println("hvue.ComputedWithGetSet")
 	return func(c *Config) {
 		if c.Computed() == js.Undefined() {
 			c.SetComputed(NewObject())

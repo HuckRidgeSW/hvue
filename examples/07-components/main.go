@@ -68,7 +68,11 @@ func dataMustBeAFunction() {
 		// actually makes it impossible to not return a new object each time.
 		func(c *hvue.Config) {
 			c.DataType = js.TypeFunction
-			c.Set("data", js.NewCallback(func(js.Value, []js.Value) interface{} { return data }))
+			c.Set("data", js.NewCallback(
+				func(js.Value, []js.Value) interface{} {
+					// Return the same object each time (don't do this).
+					return data
+				}))
 		})
 	hvue.NewVM(hvue.El("#example-2-a"))
 
@@ -124,7 +128,7 @@ func propValidation() {
 			hvue.Types(hvue.PObject),
 			hvue.DefaultFunc(hvue.Map2Obj(hvue.M{"message": "hello"}))),
 		hvue.PropObj("propF",
-			hvue.Validator(func(vm *hvue.VM, value js.Value) interface{} {
+			hvue.Validator(func(_ *hvue.VM, value js.Value) interface{} {
 				return value.Int() > 10
 			})),
 	)
@@ -139,30 +143,19 @@ type ButtonCounterT struct {
 	js.Value
 }
 
-func (b *ButtonCounterT) SetCounter(new int) {
-	b.Set("counter", new)
-}
-
+func (b *ButtonCounterT) SetCounter(new int) { b.Set("counter", new) }
 func (o *ButtonCounterT) Increment(vm *hvue.VM) {
 	o.Set("counter", o.Get("counter").Int()+1)
 	vm.Emit("increment")
-
 }
 
 type CounterEventT struct {
 	js.Value
 }
 
-func (b *CounterEventT) Total() int {
-	return b.Get("total").Int()
-}
-func (b *CounterEventT) SetTotal(new int) {
-	b.Set("total", new)
-}
-
-func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
-	o.SetTotal(o.Total() + 1)
-}
+func (b *CounterEventT) Total() int              { return b.Get("total").Int() }
+func (b *CounterEventT) SetTotal(new int)        { b.Set("total", new) }
+func (o *CounterEventT) IncrementTotal(*hvue.VM) { o.SetTotal(o.Total() + 1) }
 
 func counterEvent() {
 	hvue.NewComponent("button-counter",
@@ -227,7 +220,7 @@ func counterEventWithChannel() {
 	}()
 }
 
-func (o *ButtonCounterWithChannelT) Increment(vm *hvue.VM) {
+func (o *ButtonCounterWithChannelT) Increment(*hvue.VM) {
 	o.SetCounter(o.Counter() + 1)
 	o.eventCh <- "increment"
 }
@@ -363,7 +356,7 @@ func moreRobustCurrencyInput() {
 			"discount": 0,
 			"total":    "",
 		})}
-	watch := func(vm *hvue.VM) {
+	watch := func(*hvue.VM) {
 		data.SetTotal(strconv.FormatFloat((data.Price()*100+
 			data.Shipping()*100+
 			data.Handling()*100-
@@ -393,6 +386,6 @@ func (c *CurrencyInputT) FormatValue(vm *hvue.VM) {
 		js.Global().Get("currencyValidator").Call("format", vm.Get("value")))
 }
 
-func (c *CurrencyInputT) SelectAll(vm *hvue.VM, event *hvue.Event) {
+func (c *CurrencyInputT) SelectAll(_ *hvue.VM, event *hvue.Event) {
 	event.Target().Select()
 }
