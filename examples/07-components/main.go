@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
+
 	"github.com/huckridgesw/hvue"
 )
 
@@ -66,7 +68,7 @@ func dataMustBeAFunction() {
 		// actually makes it impossible to not return a new object each time.
 		func(c *hvue.Config) {
 			c.DataType = js.TypeFunction
-			c.Set("data", js.Global().Call("wasm_return_thing", data))
+			c.Set("data", js.NewCallback(func(js.Value, []js.Value) interface{} { return data }))
 		})
 	hvue.NewVM(hvue.El("#example-2-a"))
 
@@ -78,7 +80,8 @@ func dataMustBeAFunction() {
 		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
 			o.Set("counter", 0)
 			return &DataT{Value: o}
-		}, "counter"))
+		}),
+	)
 	hvue.NewVM(hvue.El("#example-2-b"))
 }
 
@@ -136,29 +139,8 @@ type ButtonCounterT struct {
 	js.Value
 }
 
-func (b *ButtonCounterT) SetCounter(new int) { b.Set("counter", new) }
-
-type CounterEventT struct {
-	js.Value
-}
-
-func (b *CounterEventT) Total() int       { return b.Get("total").Int() }
-func (b *CounterEventT) SetTotal(new int) { b.Set("total", new) }
-
-func counterEvent() {
-	hvue.NewComponent("button-counter",
-		hvue.Template(`<button v-on:click="Increment">{{ counter }}</button>`),
-		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
-			data := &ButtonCounterT{Value: o}
-			data.SetCounter(0)
-			return data
-		}, "counter"),
-		hvue.MethodsOf(&ButtonCounterT{}))
-	data2 := &CounterEventT{Value: hvue.Map2Obj(hvue.M{"total": 0})}
-	hvue.NewVM(
-		hvue.El("#counter-event-example"),
-		hvue.DataS(data2, data2.Value),
-		hvue.MethodsOf(&CounterEventT{}))
+func (b *ButtonCounterT) SetCounter(new int) {
+	b.Set("counter", new)
 }
 
 func (o *ButtonCounterT) Increment(vm *hvue.VM) {
@@ -167,8 +149,35 @@ func (o *ButtonCounterT) Increment(vm *hvue.VM) {
 
 }
 
+type CounterEventT struct {
+	js.Value
+}
+
+func (b *CounterEventT) Total() int {
+	return b.Get("total").Int()
+}
+func (b *CounterEventT) SetTotal(new int) {
+	b.Set("total", new)
+}
+
 func (o *CounterEventT) IncrementTotal(vm *hvue.VM) {
 	o.SetTotal(o.Total() + 1)
+}
+
+func counterEvent() {
+	hvue.NewComponent("button-counter",
+		hvue.Template(`<button v-on:click="Increment">{{ counter }}</button>`),
+		hvue.DataFunc(func(_ *hvue.VM, o js.Value) interface{} {
+			data := &ButtonCounterT{Value: o}
+			data.SetCounter(0)
+			return data
+		}),
+		hvue.MethodsOf(&ButtonCounterT{}))
+	data2 := &CounterEventT{Value: hvue.Map2Obj(hvue.M{"total": 0})}
+	hvue.NewVM(
+		hvue.El("#counter-event-example"),
+		hvue.DataS(data2, data2.Value),
+		hvue.MethodsOf(&CounterEventT{}))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -199,7 +208,7 @@ func counterEventWithChannel() {
 			}
 			data.SetCounter(0)
 			return data
-		}, "counter"),
+		}),
 		hvue.MethodsOf(&ButtonCounterWithChannelT{}))
 
 	data := &CounterEventT{Value: hvue.Map2Obj(hvue.M{"total": 0})}
@@ -252,7 +261,7 @@ func currencyInput() {
 			data := &CurrencyData{Value: o}
 			data.SetPrice("0")
 			return data
-		}, "price"),
+		}),
 
 		// Show two ways of adding the UpdateValue method:
 
@@ -343,7 +352,8 @@ func moreRobustCurrencyInput() {
 		hvue.Mounted(func(vm *hvue.VM) {
 			vm.Call("FormatValue")
 		}),
-		hvue.MethodsOf(&CurrencyInputT{}))
+		hvue.MethodsOf(&CurrencyInputT{}),
+	)
 
 	data := &CurrencyInputT{
 		Value: hvue.Map2Obj(hvue.M{

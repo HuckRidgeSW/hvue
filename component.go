@@ -1,7 +1,8 @@
 package hvue
 
 import (
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
 )
 
 // NewComponent defines a new Vue component.  It wraps js{Vue.component}:
@@ -13,11 +14,21 @@ func NewComponent(name string, opts ...ComponentOption) {
 
 	if c.DataType == js.TypeUndefined {
 		// wasm_new_data_func takes care of the hvue_dataID magic.
+		// c.Set("data",
+		// 	js.Global().Call("wasm_new_data_func",
+		// 		NewObject(), // call wasm_new_data_func with a blank template
+		// 		js.NewCallback(func([]js.Value) {}),
+		// 	))
+
 		c.Set("data",
-			js.Global().Call("wasm_new_data_func",
-				NewObject(), // call wasm_new_data_func with a blank template
-				js.NewCallback(func([]js.Value) {}),
-			))
+			js.NewCallback(func(this js.Value, _ []js.Value) interface{} {
+				newO := NewObject()
+				dataID := this.Get("$parent").Get("$data").Get("hvue_dataID")
+				if dataID != js.Undefined() {
+					newO.Set("hvue_dataID", dataID.Int())
+				}
+				return newO
+			}))
 	} else if c.DataType != js.TypeFunction {
 		panic("Cannot use Data() with NewComponent, must use DataFunc.  Component: " + name)
 	}

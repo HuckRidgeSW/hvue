@@ -49,8 +49,10 @@ function wasm_call_with_this(f) {
 }
 
 function wasm_new_data_func(templateObj, f) {
+	console.log("wasm_new_data_func");
 	return function() {
 		var newO;
+	        console.log("wasm_new_data_func callback");
 
 		// Create a new object, based on the template
 		newO = Object.assign({}, templateObj);

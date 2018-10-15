@@ -5,7 +5,9 @@ package main
 import (
 	"strings"
 
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
+
 	"github.com/huckridgesw/hvue"
 )
 
@@ -13,14 +15,15 @@ type Data struct {
 	js.Value
 }
 
-func (d *Data) Message() string               { return d.Get("message").String() }
-func (d *Data) SetMessage(new string)         { d.Set("message", new) }
-func (d *Data) SetReversedMessage(new string) { d.Set("reversedMessage", new) }
+func (d *Data) Message() string       { return d.Get("message").String() }
+func (d *Data) SetMessage(new string) { d.Set("message", new) }
+
+// func (d *Data) SetReversedMessage(new string) { d.Set("reversedMessage", new) }
 
 func main() {
 	d := &Data{Value: hvue.NewObject()}
 	d.SetMessage("Hello")
-	d.SetReversedMessage(reverse(d.Message()))
+	// d.SetReversedMessage(reverse(d.Message()))
 
 	app := hvue.NewVM(
 		hvue.El("#example"),
@@ -28,15 +31,15 @@ func main() {
 		// Synchronous function calls from JS to Go are not supported yet in
 		// go/wasm, so computed functions aren't either.  Simulating using a
 		// watcher and an extra field.
-		// hvue.Computed(
-		// 	"reversedMessage",
-		// 	func(vm *hvue.VM) interface{} {
-		// 		return reverse(d.Message())
-		// 	}),
-		hvue.Watch("message",
-			func(vm *hvue.VM) {
-				d.SetReversedMessage(reverse(d.Message()))
+		hvue.Computed(
+			"reversedMessage",
+			func(vm *hvue.VM) interface{} {
+				return reverse(d.Message())
 			}),
+		// hvue.Watch("message",
+		// 	func(vm *hvue.VM) {
+		// 		d.SetReversedMessage(reverse(d.Message()))
+		// 	}),
 	)
 	js.Global().Set("app", app.Value)
 	// In the JS console, try app.message = "some other string"

@@ -1,7 +1,8 @@
 package hvue
 
 import (
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
 )
 
 // NewObject is a utility function for creating a new JavaScript Object of
@@ -26,19 +27,21 @@ func Set(o, key, value interface{}) interface{} {
 	return value
 }
 
-func jsCallWithVM(f func(*VM) interface{}) js.Value {
-	return NewCallback(
+func jsCallWithVM(f func(*VM) interface{}) js.Callback {
+	return js.NewCallback(
 		func(this js.Value, args []js.Value) interface{} {
 			vm := &VM{Value: this}
 			return f(vm)
 		})
 }
 
-func NewCallback(f func(this js.Value, args []js.Value) interface{}) js.Value {
-	return js.Global().Call("wasm_call_with_this",
-		js.NewCallback(func(args []js.Value) {
-			f(args[0], args[1:])
-		}))
+func NewCallback(f func(this js.Value, args []js.Value) interface{}) js.Callback {
+	return js.NewCallback(f)
+	// return js.Global().Call("wasm_call_with_this",
+	// 	js.NewCallback(func(this js.Value, args []js.Value) interface{} {
+	// 		println("NewCallback ...")
+	// 		return f(this, args)
+	// 	}))
 }
 
 func Log(args ...interface{}) {

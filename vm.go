@@ -3,7 +3,8 @@ package hvue
 import (
 	"reflect"
 
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
 )
 
 // VM wraps a js Vue object.
@@ -46,7 +47,8 @@ func NewVM(opts ...ComponentOption) *VM {
 	c := &Config{Value: NewObject()}
 	c.SetSetters(NewObject())
 	c.Option(opts...)
-	vm := &VM{Value: js.Global().Get("Vue").New(c.Value)}
+	cv := js.Global().Get("Vue").New(c.Value)
+	vm := &VM{Value: cv}
 	if c.dataValue.IsValid() {
 		if vmField := c.dataValue.FieldByName("VM"); vmField.IsValid() {
 			vmField.Set(reflect.ValueOf(vm))
@@ -98,12 +100,12 @@ func DataS(goValue interface{}, jsValue js.Value) ComponentOption {
 // as with MethodsOf.  MethodsOf requires an object when you call NewVM to
 // register the VM, long before the VM is actually created or bound; this is
 // called every time a new VM or component is created.
-func DataFunc(f DataFuncT, fieldNames ...string) ComponentOption {
+func DataFunc(f DataFuncT) ComponentOption {
 	return func(c *Config) {
 		if c.Data() != js.Undefined() {
 			panic("Cannot use hvue.DataFunc together with any other Data/DataS options")
 		}
-		c.SetDataFunc(f, fieldNames...)
+		c.SetDataFunc(f)
 	}
 }
 
@@ -112,13 +114,13 @@ func DataFunc(f DataFuncT, fieldNames ...string) ComponentOption {
 // This wouldn't work if the js.Value is sealed or not "plain" (like
 // WebSocket).  But on the other hand, Vue won't work with non-plain or sealed
 // objects, so it doesn't matter.
-func storeDataID(o js.Value, value interface{}, c *Config) {
+func storeDataID(jsValue js.Value, goValue interface{}, c *Config) {
 	curID := nextDataID // small race condition here
 	nextDataID++
-	o.Set("hvue_dataID", curID)
+	jsValue.Set("hvue_dataID", curID)
 
 	// Store the Go data object, indexed by curID
-	dataObjects[curID] = value
+	dataObjects[curID] = goValue
 
 	// Schedule it to be deleted when the vm is deleted
 	Destroyed(func(*VM) {
@@ -172,8 +174,8 @@ func MethodsOf(t interface{}) ComponentOption {
 	}
 }
 
-func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value) js.Value {
-	return NewCallback(
+func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value) js.Callback {
+	return js.NewCallback(
 		func(this js.Value, jsArgs []js.Value) interface{} {
 			// Construct the arglist
 			numIn := mType.NumIn()

@@ -3,7 +3,8 @@ package hvue
 import (
 	"reflect"
 
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
 )
 
 // Config is the config object for NewVM.
@@ -39,28 +40,42 @@ func (c *Config) SetData(new js.Value) {
 
 // The type of function passed to SetDataFunc, to initialize the fields for a
 // new data object in a Vue component.
-type DataFuncT func(vm *VM, dataObj js.Value) interface{}
+type DataFuncT func(vm *VM, o js.Value) interface{}
 
-func (c *Config) SetDataFunc(newF DataFuncT, fieldNames ...string) {
-	templateObj := NewObject()
-	for _, v := range fieldNames {
-		templateObj.Set(v, "")
-	}
-	// data needs to be a real JS function that returns a real JS value.
-	// wasm_new_data_func returns such a function; said function also calls the
-	// newF callback to initialize the data slots at a later time.
-	c.Set("data",
-		js.Global().Call("wasm_new_data_func",
-			templateObj,
-			js.NewCallback(func(args []js.Value) {
-				// Initialize the new data object; get a Go object back.
-				value := newF(&VM{Value: args[0]}, args[1])
-				storeDataID(args[1], value, c)
+func (c *Config) SetDataFunc(newF DataFuncT) {
+	c.Set("data", js.NewCallback(func(this js.Value, args []js.Value) interface{} {
+		templateObj := NewObject()
+		// Initialize the new data object; get a Go object back.
+		value := newF(&VM{Value: this}, templateObj)
+		storeDataID(templateObj, value, c)
 
-				// FIXME: This should be able to return a value
-				// return value
-			})))
+		return templateObj
+	}))
 	c.DataType = js.TypeFunction
+	return
+
+	// templateObj := NewObject()
+	// for _, v := range fieldNames {
+	// 	templateObj.Set(v, "")
+	// }
+	// // data needs to be a real JS function that returns a real JS value.
+	// // wasm_new_data_func returns such a function; said function also calls the
+	// // newF callback to initialize the data slots at a later time.
+	// cb := js.Global().Call("wasm_new_data_func",
+	// 	templateObj,
+	// 	js.NewCallback(func(this js.Value, args []js.Value) interface{} {
+	// 		println("setdatafunc cb")
+	// 		// Initialize the new data object; get a Go object back.
+	// 		value := newF(&VM{Value: args[0]}, args[1])
+	// 		storeDataID(args[1], value, c)
+	// 		println("setdatafunc cb 2")
+
+	// 		// FIXME: This should be able to return a value
+	// 		return value
+	// 	}))
+	// c.Set("data", cb)
+	// c.DataType = js.TypeFunction
+	// println("setdatafunc done")
 }
 
 func (c *Config) SetProps(new js.Value)      { c.Set("props", new) }
@@ -120,6 +135,8 @@ type DirectiveOption func(*DirectiveConfig)
 // DirectiveConfig is the config object for configuring a directive.
 type DirectiveConfig struct {
 	js.Value
+	shortSet bool
+	short    js.Callback
 	// Bind             js.Value `js:"bind"`
 	// Inserted         js.Value `js:"inserted"`
 	// Update           js.Value `js:"update"`
@@ -128,8 +145,17 @@ type DirectiveConfig struct {
 	// Short            js.Value `js:"short"`
 }
 
-func (dc *DirectiveConfig) Short() js.Value       { return dc.Get("short") }
-func (dc *DirectiveConfig) SetShort(new js.Value) { dc.Set("short", new) }
+func (dc *DirectiveConfig) Short() js.Value {
+	if dc.shortSet {
+		return js.ValueOf(dc.short)
+	}
+	return js.Undefined()
+}
+
+func (dc *DirectiveConfig) SetShort(new js.Callback) {
+	dc.short = new
+	dc.shortSet = true
+}
 
 func (c *DirectiveConfig) Option(opts ...DirectiveOption) {
 	for _, opt := range opts {

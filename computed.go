@@ -1,7 +1,8 @@
 package hvue
 
 import (
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
 )
 
 // Computed defines name as a computed property.  Note that name *must not* be
@@ -15,13 +16,13 @@ import (
 //
 // Use a watcher instead.
 func Computed(name string, f func(vm *VM) interface{}) ComponentOption {
-	panic("Computed not supported")
-	// return func(c *Config) {
-	// 	if c.Computed() == js.Undefined() {
-	// 		c.SetComputed(NewObject())
-	// 	}
-	// 	c.Computed().Set(name, jsCallWithVM(f))
-	// }
+	// panic("Computed not supported")
+	return func(c *Config) {
+		if c.Computed() == js.Undefined() {
+			c.SetComputed(NewObject())
+		}
+		c.Computed().Set(name, jsCallWithVM(f))
+	}
 }
 
 // ComputedWithGetSet defines name as a computed property with explicit get &
@@ -36,20 +37,21 @@ func Computed(name string, f func(vm *VM) interface{}) ComponentOption {
 //
 // Use a watcher instead.
 func ComputedWithGetSet(name string, get func(vm *VM) interface{}, set func(vm *VM, newValue js.Value)) ComponentOption {
-	panic("ComputedWithGetSet not supported")
-	// return func(c *Config) {
-	// 	if c.Computed() == js.Undefined() {
-	// 		c.SetComputed(NewObject())
-	// 	}
-	// 	c.Computed().Set(name,
-	// 		map[string]interface{}{
-	// 			"get": jsCallWithVM(get),
-	// 			"set": NewCallback(
-	// 				func(this js.Value, args []js.Value) interface{} {
-	// 					vm := &VM{Value: this}
-	// 					set(vm, args[0])
-	// 					return nil
-	// 				})})
-	// 	c.Setters().Set(name, true)
-	// }
+	// panic("ComputedWithGetSet not supported")
+	println("hvue.ComputedWithGetSet")
+	return func(c *Config) {
+		if c.Computed() == js.Undefined() {
+			c.SetComputed(NewObject())
+		}
+		c.Computed().Set(name,
+			map[string]interface{}{
+				"get": jsCallWithVM(get),
+				"set": js.NewCallback(
+					func(this js.Value, args []js.Value) interface{} {
+						vm := &VM{Value: this}
+						set(vm, args[0])
+						return nil
+					})})
+		c.Setters().Set(name, true)
+	}
 }

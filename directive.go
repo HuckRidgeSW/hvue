@@ -1,7 +1,8 @@
 package hvue
 
 import (
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
 )
 
 // Directive wraps a js{Vue.directive} object.
@@ -85,11 +86,11 @@ func Unbind(f func(el js.Value, binding *DirectiveBinding, vnode js.Value)) Dire
 
 func makeDirectiveOption(name string, f func(el js.Value, binding *DirectiveBinding, vnode js.Value)) DirectiveOption {
 	return func(c *DirectiveConfig) {
-		c.Set(name, NewCallback(
-			func(thisNotSet js.Value, jsArgs []js.Value) interface{} {
-				f(jsArgs[0],
-					&DirectiveBinding{Val: jsArgs[1]},
-					jsArgs[2])
+		c.Set(name, js.NewCallback(
+			func(thisNotSet js.Value, args []js.Value) interface{} {
+				f(args[0],
+					&DirectiveBinding{Val: args[1]},
+					args[2])
 				return nil
 			}))
 	}
@@ -97,7 +98,7 @@ func makeDirectiveOption(name string, f func(el js.Value, binding *DirectiveBind
 
 func makeDirectiveUpdateOption(name string, f func(el js.Value, binding *DirectiveBinding, vnode, oldVnode js.Value)) DirectiveOption {
 	return func(c *DirectiveConfig) {
-		c.Set(name, NewCallback(
+		c.Set(name, js.NewCallback(
 			func(thisNotSet js.Value, jsArgs []js.Value) interface{} {
 				f(jsArgs[0],
 					&DirectiveBinding{Val: jsArgs[1]},
@@ -115,16 +116,12 @@ func makeDirectiveUpdateOption(name string, f func(el js.Value, binding *Directi
 // https://vuejs.org/v2/guide/custom-directive.html#Function-Shorthand
 func Short(f func(el js.Value, binding *DirectiveBinding, vnode, oldVnode js.Value)) DirectiveOption {
 	return func(c *DirectiveConfig) {
-		c.SetShort(NewCallback(
+		c.SetShort(js.NewCallback(
 			func(thisNotSet js.Value, jsArgs []js.Value) interface{} {
 				var lastArg js.Value
-				switch len(jsArgs) {
-				case 3:
-					// Do nothing
-				case 4:
+				if len(jsArgs) == 4 {
 					lastArg = jsArgs[3]
 				}
-
 				f(jsArgs[0],
 					&DirectiveBinding{Val: jsArgs[1]},
 					jsArgs[2],

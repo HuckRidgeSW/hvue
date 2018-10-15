@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gopherjs/gopherwasm/js"
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
+
 	"github.com/huckridgesw/hvue"
 )
 

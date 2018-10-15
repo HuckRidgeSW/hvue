@@ -1,6 +1,9 @@
 package hvue
 
-import "github.com/gopherjs/gopherwasm/js"
+import (
+	// "github.com/gopherjs/gopherwasm/js"
+	"syscall/js"
+)
 
 // Event wraps the event object sent to v-on event handlers.
 //
