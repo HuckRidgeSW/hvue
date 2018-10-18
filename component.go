@@ -128,7 +128,9 @@ func Default(def interface{}) PropOption {
 // function, which returns a new value.
 func DefaultFunc(def js.Value) PropOption {
 	return func(p *PropConfig) {
-		p.SetDefault(js.Global().Call("wasm_return_copy", def))
+		p.SetDefault(js.NewCallback(func(js.Value, []js.Value) interface{} {
+			return js.Global().Get("Object").Call("assign", NewObject(), def)
+		}))
 	}
 }
 
