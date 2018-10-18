@@ -188,12 +188,12 @@ func makeMethod(name string, isMethod bool, mType reflect.Type, m reflect.Value)
 			if isMethod {
 				// Lookup the receiver in dataObjects, based on
 				// $data.hvue_dataID
-				dataID := this.Get("$data").Get("hvue_dataID").Int()
-				if dataID == 0 {
+				dataID, err := GetDeep(this, "$data", "hvue_dataID")
+				if err != nil {
 					// FIXME: A better error here would be great, Mmmkay?
 					panic("Unknown dataID for method " + name)
 				}
-				receiver, ok := dataObjects[dataID]
+				receiver, ok := dataObjects[dataID.Int()]
 				if !ok {
 					panic("Unknown dataID for method " + name)
 				}

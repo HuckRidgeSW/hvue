@@ -3,6 +3,7 @@ package hvue
 import (
 	// "github.com/gopherjs/gopherwasm/js"
 	"fmt"
+	"math"
 	"syscall/js"
 )
 
@@ -49,4 +50,30 @@ func GetDeep(o js.Value, fields ...string) (js.Value, error) {
 		o = new
 	}
 	return o, nil
+}
+
+// In JavaScript, a truthy value is a value that is considered true when
+// encountered in a Boolean context. All values are truthy unless they are
+// defined as falsy (i.e., except for false, 0, "", null, undefined, and NaN).
+func Falsy(o js.Value) bool {
+	return !Truthy(o)
+}
+
+func Truthy(o js.Value) bool {
+	switch o.Type() {
+	case js.TypeUndefined, js.TypeNull:
+		return false
+	case js.TypeBoolean:
+		return o.Bool()
+	case js.TypeNumber:
+		if math.IsNaN(o.Float()) {
+			return false
+		}
+		return o.Float() != 0
+	case js.TypeString:
+		return o.String() != ""
+	case js.TypeSymbol, js.TypeObject, js.TypeFunction:
+		return true
+	}
+	return true
 }
