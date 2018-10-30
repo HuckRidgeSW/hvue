@@ -5,7 +5,7 @@ for the [Vue](https://vuejs.org/) Javascript framework.
 
 [This (the "master" branch)](https://github.com/HuckRidgeSW/hvue/tree/master)
 is the go/wasm + GopherJS version.  It uses
-[gopherwasm](github.com/gopherjs/gopherwasm/js) to provide a compatability
+[gopherwasm](https://github.com/gopherjs/gopherwasm) to provide a compatability
 layer between go/wasm and GopherJS.  go/wasm is patterned on GopherJS, but
 doesn't have all of its capabilities and language-specific "magic".  In
 particular, go/wasm doesn't have GopherJS's "dual struct/object" magic, which
